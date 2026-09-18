@@ -105,6 +105,7 @@ pub fn device_json(dev: &Device, view: &View<'_>, roots: &crate::paths::Roots) -
             "width_max".into(),
             opt_u(dev.link.value().and_then(|l| l.width_max).map(|v| v as u64)),
         ),
+        ("source".into(), Json::Str(dev.link_via.to_string())),
     ]);
     fn avail_gen(g: Option<u8>) -> Json {
         opt_u(g.map(|v| v as u64))
@@ -139,7 +140,13 @@ pub fn device_json(dev: &Device, view: &View<'_>, roots: &crate::paths::Roots) -
         .map(|t| {
             Json::Obj(vec![
                 ("label".into(), Json::Str(t.label.clone())),
-                ("input_c".into(), num_u(fields::mc_to_c(t.input_mc))),
+                (
+                    "input_c".into(),
+                    t.input_avail()
+                        .value()
+                        .map(|mc| num_u(fields::mc_to_c(*mc)))
+                        .unwrap_or(Json::Null),
+                ),
                 ("max_c".into(), opt_u(t.max_mc.map(fields::mc_to_c))),
                 ("crit_c".into(), opt_u(t.crit_mc.map(fields::mc_to_c))),
                 (
@@ -181,24 +188,26 @@ pub fn device_json(dev: &Device, view: &View<'_>, roots: &crate::paths::Roots) -
             .map(|uw| num_f(*uw as f64 / 1e6, 2))
             .unwrap_or(Json::Null)
     }
+    let broken_reason = dev.rpm_broken().then(|| dev.rpm_broken_reason());
+    let gate = |a: Json| broken_reason.as_ref().map(|_| Json::Null).unwrap_or(a);
     let power = Json::Obj(vec![
         (
             "draw_w".into(),
-            view.rates.map(|r| w(&r.draw_card_w)).unwrap_or(Json::Null),
+            gate(view.rates.map(|r| w(&r.draw_card_w)).unwrap_or(Json::Null)),
         ),
         (
             "draw_pkg_w".into(),
-            view.rates.map(|r| w(&r.draw_pkg_w)).unwrap_or(Json::Null),
+            gate(view.rates.map(|r| w(&r.draw_pkg_w)).unwrap_or(Json::Null)),
         ),
         ("sample_ms".into(), opt_u(view.rates.map(|r| r.dt_ms))),
         ("limit".into(), lim),
         (
             "energy_card_j".into(),
-            h.map(|h| avail_u(&h.energy_card)).unwrap_or(Json::Null),
+            gate(h.map(|h| avail_u(&h.energy_card)).unwrap_or(Json::Null)),
         ),
         (
             "energy_pkg_j".into(),
-            h.map(|h| avail_u(&h.energy_pkg)).unwrap_or(Json::Null),
+            gate(h.map(|h| avail_u(&h.energy_pkg)).unwrap_or(Json::Null)),
         ),
         (
             "voltage_pkg_mv".into(),
@@ -211,21 +220,27 @@ pub fn device_json(dev: &Device, view: &View<'_>, roots: &crate::paths::Roots) -
             .map(|uj| num_f(*uj as f64 / 1e6, 3))
             .unwrap_or(Json::Null)
     };
-    let e_card = match view.rates {
-        Some(r) => r.energy_card.clone(),
-        None => h
-            .map(|x| x.energy_card.clone())
-            .unwrap_or(Avail::NotAvailable(crate::avail::Reason::Missing(
-                std::path::PathBuf::from("hwmon"),
-            ))),
+    let e_card = match &broken_reason {
+        Some(rs) => Avail::NotAvailable(rs.clone()),
+        None => match view.rates {
+            Some(r) => r.energy_card.clone(),
+            None => h
+                .map(|x| x.energy_card.clone())
+                .unwrap_or(Avail::NotAvailable(crate::avail::Reason::Missing(
+                    std::path::PathBuf::from("hwmon"),
+                ))),
+        },
     };
-    let e_pkg = match view.rates {
-        Some(r) => r.energy_pkg.clone(),
-        None => h
-            .map(|x| x.energy_pkg.clone())
-            .unwrap_or(Avail::NotAvailable(crate::avail::Reason::Missing(
-                std::path::PathBuf::from("hwmon"),
-            ))),
+    let e_pkg = match &broken_reason {
+        Some(rs) => Avail::NotAvailable(rs.clone()),
+        None => match view.rates {
+            Some(r) => r.energy_pkg.clone(),
+            None => h
+                .map(|x| x.energy_pkg.clone())
+                .unwrap_or(Avail::NotAvailable(crate::avail::Reason::Missing(
+                    std::path::PathBuf::from("hwmon"),
+                ))),
+        },
     };
     let power = match power {
         Json::Obj(mut v) => {
@@ -299,7 +314,8 @@ pub fn device_json(dev: &Device, view: &View<'_>, roots: &crate::paths::Roots) -
                     "utilization_pct".into(),
                     util.map(pct).unwrap_or(Json::Null),
                 ),
-                ("idle_status".into(), avail_s(&g.idle_status)),
+                ("idle_status".into(), avail_s(&g.idle_state())),
+                ("idle_status_file".into(), avail_s(&g.idle_status)),
                 ("power_profile".into(), avail_s(&g.profile)),
                 (
                     "throttle".into(),
@@ -431,6 +447,30 @@ pub fn placement_json(roots: &crate::paths::Roots, dev: &Device) -> Vec<(String,
                 None => Json::Null,
             },
         ),
+        ("power_state".into(), avail_s(&dev.power.state)),
+        ("runtime_status".into(), avail_s(&dev.power.runtime_status)),
+        (
+            "d3cold_allowed".into(),
+            dev.power
+                .d3cold_allowed
+                .value()
+                .map(|v| Json::Bool(*v == 1))
+                .unwrap_or(Json::Null),
+        ),
+        (
+            "aspm_l1".into(),
+            match (
+                dev.power.l1_endpoint.value(),
+                dev.power.l1_root_port.value(),
+            ) {
+                (Some(a), Some(b)) if a != b => {
+                    Json::Str(format!("mixed ({a} device, {b} root port)"))
+                }
+                (Some(a), _) | (_, Some(a)) => Json::Str(a.clone()),
+                _ => Json::Null,
+            },
+        ),
+        ("aspm_policy".into(), avail_s(&dev.power.policy)),
     ]);
     let connectors = Json::Arr(
         crate::sriov::connectors(roots, dev)

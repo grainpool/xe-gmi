@@ -126,6 +126,11 @@ pub const CATALOG: &[FieldDef] = &[
     f!("pci.link.gen.max", "", "maximum PCIe generation"),
     f!("pci.link.width.current", "", "current PCIe lane width"),
     f!("pci.link.width.max", "", "maximum PCIe lane width"),
+    f!(
+        "pci.link.source",
+        "",
+        "PCI node the link was read from (Arc endpoint nodes always report gen1 x1)"
+    ),
     f!("driver", "", "kernel driver bound to the device"),
     f!(
         "driver.kernel",
@@ -408,7 +413,11 @@ pub const CATALOG: &[FieldDef] = &[
         "",
         "active throttle reasons over all GTs"
     ),
-    f!("idle.status", "", "gt0 C-state (gt-c0 active, gt-c6 idle)"),
+    f!(
+        "idle.status",
+        "",
+        "gt0 C-state (gt-c0 active, gt-c6 idle; derived from act_freq, raw file under -v)"
+    ),
     f!("fan.rpm", "RPM", "fan1 tachometer"),
     f!(
         "fan.percent",
@@ -480,6 +489,51 @@ pub const CATALOG: &[FieldDef] = &[
         "device",
         "user",
         "derived"
+    ),
+    f!(
+        "pci.power_state",
+        "",
+        "current PCI power state (D0, D3hot, D3cold)",
+        "pci-sysfs",
+        "device",
+        "user",
+        "authoritative"
+    ),
+    f!(
+        "pci.runtime_status",
+        "",
+        "runtime power management status (error means kernel reads are unreliable)",
+        "pci-sysfs",
+        "device",
+        "user",
+        "authoritative"
+    ),
+    f!(
+        "pci.d3cold_allowed",
+        "",
+        "kernel may cut slot power for this device in D3cold",
+        "pci-sysfs",
+        "device",
+        "user",
+        "authoritative"
+    ),
+    f!(
+        "pci.aspm.policy",
+        "",
+        "system PCIe ASPM policy (bracketed selection)",
+        "sysfs",
+        "system",
+        "user",
+        "authoritative"
+    ),
+    f!(
+        "pci.aspm.l1",
+        "",
+        "PCIe ASPM L1 (device and root port link states combined)",
+        "sysfs",
+        "device",
+        "user",
+        "authoritative"
     ),
     f!(
         "pci.aer.correctable",
@@ -669,6 +723,13 @@ pub fn resolve(name: &str, g: Option<u32>, v: &View) -> Avail<Cell> {
             }
             None => reason_of_avail(&dev.link),
         },
+        "pci.link.source" => Avail::Value(c_str(match dev.link_via {
+            crate::probe::pci::LINK_VIA_ROOT_PORT => format!(
+                "root port {}",
+                dev.placement.root_port.value().cloned().unwrap_or_default()
+            ),
+            _ => crate::probe::pci::LINK_VIA_ENDPOINT.to_string(),
+        })),
         "driver" => Avail::Value(c_str("xe")),
         "driver.kernel" => Avail::Value(c_str(v.kernel.clone())),
         "drm.card" => Avail::Value(c_str(dev.card.clone())),
@@ -678,7 +739,7 @@ pub fn resolve(name: &str, g: Option<u32>, v: &View) -> Avail<Cell> {
         },
         "temp.pkg" | "temp.vram" | "temp.mctrl" | "temp.pcie" => {
             match temp_by_label(v, name.trim_start_matches("temp.")) {
-                Some(t) => Avail::Value(c_int(mc_to_c(t.input_mc))),
+                Some(t) => t.input_avail().map(|mc| c_int(mc_to_c(mc))),
                 None => na(Reason::NotSupported("temperature channel not exposed")),
             }
         }
@@ -701,6 +762,9 @@ pub fn resolve(name: &str, g: Option<u32>, v: &View) -> Avail<Cell> {
                 Some(mc) => Avail::Value(c_int(mc_to_c(mc))),
                 None => na(missing(dev, &format!("hwmon temp limit for {base}"))),
             }
+        }
+        "power.draw" | "power.draw.pkg" if dev.rpm_broken() => {
+            na(dev.rpm_broken_reason()) // the energy counter is frozen while the device is off
         }
         "power.draw" | "power.draw.pkg" => {
             let pkg = name.ends_with(".pkg");
@@ -769,6 +833,7 @@ pub fn resolve(name: &str, g: Option<u32>, v: &View) -> Avail<Cell> {
             Some(gt) => profile_of(v, gt),
             None => na(Reason::NotSupported("no GTs exposed")),
         },
+        "energy.card" | "energy.pkg" if dev.rpm_broken() => na(dev.rpm_broken_reason()),
         "energy.card" | "energy.pkg" => {
             let e = match (v.rates, dev.hwmon.as_ref()) {
                 (Some(r), _) => Some(if name == "energy.card" {
@@ -873,6 +938,24 @@ pub fn resolve(name: &str, g: Option<u32>, v: &View) -> Avail<Cell> {
         "pci.root_port" => match dev.placement.root_port.value() {
             Some(s) => Avail::Value(c_str(s.clone())),
             None => reason_of_avail(&dev.placement.root_port),
+        },
+        "pci.power_state" => dev.power.state.clone().map(c_str),
+        "pci.runtime_status" => dev.power.runtime_status.clone().map(c_str),
+        "pci.d3cold_allowed" => dev
+            .power
+            .d3cold_allowed
+            .clone()
+            .map(|v| c_str(if v == 1 { "yes" } else { "no" })),
+        "pci.aspm.policy" => dev.power.policy.clone().map(c_str),
+        "pci.aspm.l1" => match (
+            dev.power.l1_endpoint.value(),
+            dev.power.l1_root_port.value(),
+        ) {
+            (Some(a), Some(b)) if a != b => {
+                Avail::Value(c_str(format!("mixed ({a} device, {b} root port)")))
+            }
+            (Some(a), _) | (_, Some(a)) => Avail::Value(c_str(a.clone())),
+            (None, None) => reason_of_avail(&dev.power.l1_endpoint),
         },
         "pci.aer.correctable" => match dev.placement.aer.as_ref().map(|a| &a.correctable) {
             Some(Avail::Value(n)) => Avail::Value(c_int(*n)),
@@ -1026,9 +1109,10 @@ pub fn resolve(name: &str, g: Option<u32>, v: &View) -> Avail<Cell> {
         },
         "throttle.reasons" => throttle_reasons_for(v.dev, g),
         "idle.status" => match gt_of(v, g) {
-            Some(gt) => gt.idle_status.clone().map(c_str),
+            Some(gt) => gt.idle_state().map(c_str),
             None => na(Reason::NotSupported("no such GT on this device")),
         },
+        "fan.rpm" if dev.rpm_broken() => na(dev.rpm_broken_reason()), // 0 RPM is a read, not a fact
         "fan.rpm" => match dev.hwmon.as_ref().and_then(|h| h.fans.first()) {
             Some((_, rpm)) => rpm.clone().map(c_int),
             None => na(missing(dev, "fan1_input")),

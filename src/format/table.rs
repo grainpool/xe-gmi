@@ -137,13 +137,18 @@ fn gt_row(view: &View<'_>, k: usize, gt: &crate::probe::gt::Gt) -> String {
         }
         Avail::NotAvailable(_) => NA.to_string(),
     };
-    let fan = match view.dev.hwmon.as_ref().map(|h| h.fans.as_slice()) {
-        None | Some([]) => NA.to_string(),
-        Some(fans) => match fans.iter().find(|(id, _)| *id == k as u32 + 1) {
-            Some((_, Avail::Value(rpm))) => rpm.to_string(),
-            Some((_, Avail::NotAvailable(_))) => NA.to_string(),
-            None => String::new(),
-        },
+    let fan = if view.dev.rpm_broken() {
+        // a tachometer read against the powered-down device is not a measurement
+        NA.to_string()
+    } else {
+        match view.dev.hwmon.as_ref().map(|h| h.fans.as_slice()) {
+            None | Some([]) => NA.to_string(),
+            Some(fans) => match fans.iter().find(|(id, _)| *id == k as u32 + 1) {
+                Some((_, Avail::Value(rpm))) => rpm.to_string(),
+                Some((_, Avail::NotAvailable(_))) => NA.to_string(),
+                None => String::new(),
+            },
+        }
     };
     cells([
         &format!("gt{}", gt.id),

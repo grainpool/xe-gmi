@@ -101,14 +101,22 @@ pub fn backend(roots: &Roots) -> Backend {
 }
 
 /// An open handle to one device's kernel interface: a render-node fd, or its replay directory.
+/// `rpm_error` is the device's runtime-PM status at open time; it gives the otherwise ambiguous
+/// `EINVAL` from the query ioctl a second possible meaning (refusal during a broken power state).
 pub enum Handle {
-    Real { fd: std::fs::File },
+    Real { fd: std::fs::File, rpm_error: bool },
     Replay { dir: PathBuf },
 }
 
 /// Opens the render node (falling back to the card node). Unavailability is a value-level `N/A`,
 /// never an error: a device without kabi access keeps every other feature working.
-pub fn open_device(roots: &Roots, pci: &str, card: &str, render: Option<&str>) -> Avail<Handle> {
+pub fn open_device(
+    roots: &Roots,
+    pci: &str,
+    card: &str,
+    render: Option<&str>,
+    rpm_error: bool,
+) -> Avail<Handle> {
     match backend(roots) {
         Backend::Replay(root) => {
             let dir = root.join("drm-query").join(pci);
@@ -135,7 +143,7 @@ pub fn open_device(roots: &Roots, pci: &str, card: &str, render: Option<&str>) -
             opts.read(true).write(true);
             std::os::unix::fs::OpenOptionsExt::custom_flags(&mut opts, 0o2000000); // O_CLOEXEC
             match opts.open(&node) {
-                Ok(fd) => Avail::Value(Handle::Real { fd }),
+                Ok(fd) => Avail::Value(Handle::Real { fd, rpm_error }),
                 Err(e) => Avail::NotAvailable(Reason::Detail(format!(
                     "render node not accessible ({}: {e})",
                     node.display()
@@ -180,8 +188,16 @@ impl Default for Kabi {
 }
 
 impl Kabi {
-    pub fn read(roots: &Roots, pci: &str, card: &str, render: Option<&str>) -> Kabi {
-        let h = match open_device(roots, pci, card, render) {
+    /// `rpm_error`: the device's `power/runtime_status` reading `error` at open time — see
+    /// `Handle`; it disambiguates a query `EINVAL`.
+    pub fn read(
+        roots: &Roots,
+        pci: &str,
+        card: &str,
+        render: Option<&str>,
+        rpm_error: bool,
+    ) -> Kabi {
+        let h = match open_device(roots, pci, card, render, rpm_error) {
             Avail::Value(h) => h,
             Avail::NotAvailable(r) => {
                 fn na<T>(r: &Reason) -> Avail<T> {
@@ -247,14 +263,29 @@ fn query(h: &Handle, name: &str, query: u32, prefill: &[u8]) -> Avail<Vec<u8>> {
     match h {
         Handle::Replay { dir } => match std::fs::read(dir.join(name)) {
             Ok(bytes) => Avail::Value(bytes),
-            Err(_) => unsupported("query not supported by this kernel"),
+            // Absent replay file = the captured kernel did not answer this query.
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                unsupported("query not supported by this kernel")
+            }
+            Err(e) => Avail::NotAvailable(Reason::Detail(format!(
+                "query fixture unreadable ({}: {e})",
+                dir.join(name).display()
+            ))),
         },
-        Handle::Real { fd } => match ioctl::query(fd, query, prefill) {
+        Handle::Real { fd, rpm_error } => match ioctl::query(fd, query, prefill) {
             Ok(bytes) => Avail::Value(bytes),
+            // The kernel answers EINVAL both for a query type it does not implement and for an
+            // ioctl refused while the device runtime power state is in error — only the
+            // runtime_status read tells the two apart, so name both readings when it does.
+            Err(e) if e == rustix::io::Errno::INVAL && *rpm_error => Avail::NotAvailable(
+                Reason::Detail("query failed: Invalid argument; the device runtime power state \
+                                reports error, so this is a refused query, not a missing kernel feature"
+                    .into()),
+            ),
             Err(e) if e == rustix::io::Errno::INVAL => {
                 unsupported("query not supported by this kernel")
             }
-            Err(_) => unsupported("query failed"),
+            Err(e) => Avail::NotAvailable(Reason::Detail(format!("query failed: {e}"))),
         },
     }
 }
@@ -292,6 +323,17 @@ pub fn uc_fw(h: &Handle, uc_type: u16) -> Avail<UcFw> {
         &prefill,
     )
     .map(|b| parse::uc_fw(&b))
+    // A microcontroller that was never loaded answers with all-zero version fields, not an
+    // error: zero is "absent", and 0.0.0 is not a firmware version anyone should be told.
+    .and_then(|u| {
+        if u.major == 0 && u.minor == 0 && u.patch == 0 && u.branch == 0 {
+            Avail::NotAvailable(Reason::Detail(
+                "the kernel reports a zero version: this microcontroller is not loaded".into(),
+            ))
+        } else {
+            Avail::Value(u)
+        }
+    })
 }
 
 /// RAS nodes and counters. The replay tree's `ras/` directory stands in for the netlink family:

@@ -41,6 +41,24 @@ pub struct TempSensor {
     pub emergency_mc: Option<i64>,
 }
 
+/// A GPU at or above this reading is reporting the all-ones register (255 °C): the device is
+/// powered down, not hot. Every temperature limit on these parts sits at 100–125 °C, so a
+/// reading beyond 250 °C is never an observation.
+pub const TEMP_SENTINEL_MC: i64 = 250_000;
+
+impl TempSensor {
+    pub fn input_avail(&self) -> Avail<i64> {
+        if self.input_mc >= TEMP_SENTINEL_MC {
+            Avail::NotAvailable(Reason::Detail(
+                "the sensor reports its powered-down sentinel (255 C); the device is off, not hot"
+                    .into(),
+            ))
+        } else {
+            Avail::Value(self.input_mc)
+        }
+    }
+}
+
 fn num(dir: &Path, name: &str) -> Avail<u64> {
     sysfs::read_u64(&dir.join(name))
 }

@@ -43,6 +43,13 @@ impl<T> Avail<T> {
         }
     }
 
+    pub fn and_then<U>(self, f: impl FnOnce(T) -> Avail<U>) -> Avail<U> {
+        match self {
+            Avail::Value(v) => f(v),
+            Avail::NotAvailable(r) => Avail::NotAvailable(r),
+        }
+    }
+
     pub fn or_reason(&self) -> Result<&T, &Reason> {
         match self {
             Avail::Value(v) => Ok(v),

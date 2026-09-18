@@ -1,0 +1,6 @@
+GPU 0 [0000:17:00.0]
+  Link                     : gen5 x16 (max gen5 x16) via root port
+  Power                    : state D3cold, runtime error, D3cold allowed yes
+  ASPM                     : policy powersupersave, L1 device disabled, L1 root port enabled
+  AER (endpoint)           : N/A (no AER statistics exposed for this device)
+  Root port 0000:16:01.0   : N/A (no AER statistics exposed on the root port)

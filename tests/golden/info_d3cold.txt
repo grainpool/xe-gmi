@@ -1,0 +1,67 @@
+xe-gmi 0.2.2 report
+Timestamp                       : 2026-09-14T10:22:31Z
+Kernel                          : 7.1.13-100.fc43.x86_64
+Driver                          : xe (module live)
+Devices                         : 1
+
+GPU 0 [0000:17:00.0]
+    Product name                : Battlemage G31 [Arc Pro B65]
+    PCI id                      : 8086:e222 (subsystem 8086:1100, revision 01)
+    DRM nodes                   : card0, renderD128
+    PCIe link                   : gen5 x16 (max gen5 x16); via root port (endpoint nodes report gen1 x1, Intel KB 000094587)
+    Persistence                 : not installed
+        VA bits                 : 48
+        Min alignment           : 64 KiB
+    Thermal
+        pkg                     : N/A
+        vram                    : N/A
+    Power
+        Draw card               : N/A
+        Limit                   : 150.00 W (pl2 card)
+        PL1 sustained card      : N/A
+        PL2 burst card          : 150.00 W (window 15 ms)
+        Critical card           : 400.00 W
+        Energy card             : 500000.000 J
+    Memory
+        Total                   : 32768 MiB (kernel memory regions)
+        Used                    : 2048 MiB (kernel allocator; 0 MiB resident in 0 clients)
+        Free                    : 30720 MiB
+        CPU-visible             : 32768 MiB total, 2048 MiB used (full BAR)
+        Min page size           : 64 KiB
+    GT 0 (tile 0, gt0-rc)
+        Clock cur / act         : 0 / 0 MHz
+        Clock min / max         : 300 / 2850 MHz
+        Clock rpn/rpe/rpa/rp0   : 300 / 300 / 2850 / 2850 MHz
+        Utilization             : 0.0 % (active time over 2000 ms)
+        Idle status             : gt-c6
+        Power profile           : base
+        Throttle                : none
+    Fans
+        (unreliable: the device runtime power state reports error)
+    Engines
+        render (rcs)            : 0.0 %
+        compute (ccs)           : 0.0 %
+        video (vcs)             : 0.0 %
+        enhance (vecs)          : 0.0 %
+        copy (bcs)              : 0.0 %
+    Processes                   : 0 visible clients (run as root to see every user)
+    Topology
+        NUMA node               : 0
+        Local CPUs              : 0-15
+        IOMMU group             : 16
+        PCI path                : pci0000:16 > 0000:16:01.0 > 0000:17:00.0
+    PCIe health
+        AER endpoint            : N/A
+        Root port               : N/A
+    SR-IOV
+        VFs                     : N/A
+    Crash dumps                 : none pending
+    Firmware
+        GuC (submission)        : 70.44.1
+    Hardware
+  Tile 0
+    GT 0 [main] Xe 20.1.0, reference clock 19200000 Hz, near memory vram0
+      engines: rcs0, ccs0, ccs1, ccs2, ccs3, bcs0, bcs1
+      geometry DSS 20, compute DSS 20, L3 banks 16, EUs per DSS 8, SIMD16 EUs per DSS 8
+    GT 1 [media] Xe 13.0.0, reference clock 19200000 Hz, near memory vram0
+      engines: vcs0, vcs1, vecs0

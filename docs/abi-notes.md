@@ -123,9 +123,31 @@ see every user"). A missing `drm-total-cycles-<class>` makes that class N/A on o
 ## PCI link
 
 `current_link_speed`/`max_link_speed` contain e.g. `16.0 GT/s PCIe` (or `Unknown speed`);
-`*_{current,max}_link_width` are integers. **Both current values drop while the link is in a
-low-power state** — the captured B65 shows `2.5 GT/s` ×1 on a Gen5 x16 card; xe-gmi reports what
-it reads.
+`*_{current,max}_link_width` are integers. **The endpoint's link nodes cannot be trusted on these
+cards**: Intel KB 000094587 documents that the Arc endpoint's `current_*`/`max_*_link_*` report
+`2.5 GT/s` ×1 on a Gen5 x16 card while the powered-down or internally-switched endpoint keeps its
+root port reporting the real trained link (verified on the B65 rig and captured in
+`fixtures/synthetic/b65-g31-k7.1-d3cold`). Since 0.2.2 `pcie`/`info` resolve the link **through the
+root port** whenever that view is available (`via root port`), and only fall back to the endpoint
+nodes — annotating the artifact — when it is not.
+
+## PCIe power state, and reads that can wake the card (0.2.2)
+
+`power_state` (D0/D3hot/D3cold), `power/runtime_status`, `power/d3cold_allowed` and
+`link/l1_aspm` on device and root port are read-only; xe-gmi never writes runtime-PM files.
+`runtime_status` normally says `active`/`suspending`/`suspended`/`rpm_idle`/`rpm-suspended`
+(dashes or underscores, kernel version dependent). The value `error` means the driver's usage
+count went unbalanced (the xe `Runtime PM usage count underflow!` bug class) and the device is
+parked where reads answer bus sentinels (`0xFFFFFFFF` → 255 °C, fan 0). xe-gmi gates those
+sentinels to N/A and names the runtime-status condition instead, so `255` never passes for a
+temperature.
+
+`gtidle/idle_status` mirrors `gt-c0` even for a parked GT (proven on the rig: the file lies after
+the park); `idle.status` is therefore derived, with `clock/act_freq == 0` deciding. Reading
+fdinfo (`processes`, per-client stats) and the GT force-wake paths take a runtime-PM reference:
+polling wakes a sleeping card, and against a wedged device produces kernel `forcewake ... MMIO
+unreliable` warnings rather than data. `doctor` surfaces the kmsg underflow records so the wedge
+is visible before a polling loop hammers it.
 
 ## Write error codes you may see
 

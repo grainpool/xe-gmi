@@ -1,4 +1,4 @@
-xe-gmi 0.2.1 doctor
+xe-gmi 0.2.2 doctor
 Kernel                          : 7.1.4-200.fc43.x86_64
 Distro                          : Fedora Linux 43 (Workstation Edition)
 xe module                       : loaded (live)
@@ -9,6 +9,8 @@ GPUs on the PCI bus
 Usable xe devices               : 1
 Capabilities of 0000:e3:00.0
     power limit                 : pl2 card writable (power1_cap); pl1 not exposed
+    power state                 : n/a / runtime active / D3cold allowed n/a
+    aspm                        : policy n/a, L1 endpoint n/a, L1 root port n/a
     critical limit              : 400.00 W (read-only in xe-gmi)
     energy counters             : card, pkg
     temperatures                : pkg, vram, mctrl, pcie, vram_ch_0..vram_ch_7 (with crit/emergency limits)

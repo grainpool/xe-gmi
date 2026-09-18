@@ -107,7 +107,7 @@ pub fn render(r: &Report<'_>) -> String {
         out.push_str(&format!("\nGPU {} [{}]\n", dev.index, dev.pci));
         device_block(&mut out, r, dev, view);
         if r.want(Section::Thermal) {
-            thermal_block(&mut out, dev);
+            thermal_block(&mut out, dev, r.verbose);
         }
         if r.want(Section::Power) {
             power_block(&mut out, r, dev, view);
@@ -256,12 +256,17 @@ fn device_block(out: &mut String, r: &Report<'_>, dev: &Device, view: &View<'_>)
             Some(l) => {
                 let g = |o: Option<u8>| o.map(|v| v.to_string()).unwrap_or_else(|| NA.into());
                 let w = |o: Option<u32>| o.map(|v| v.to_string()).unwrap_or_else(|| NA.into());
+                let via = if dev.link_via == crate::probe::pci::LINK_VIA_ROOT_PORT {
+                    "; via root port (endpoint nodes report gen1 x1, Intel KB 000094587)"
+                } else {
+                    ""
+                };
                 kv(
                     out,
                     4,
                     "PCIe link",
                     &format!(
-                        "gen{} x{} (max gen{} x{})",
+                        "gen{} x{} (max gen{} x{}){via}",
                         g(l.gen_cur),
                         w(l.width_cur),
                         g(l.gen_max),
@@ -295,7 +300,7 @@ fn device_block(out: &mut String, r: &Report<'_>, dev: &Device, view: &View<'_>)
     }
 }
 
-fn thermal_block(out: &mut String, dev: &Device) {
+fn thermal_block(out: &mut String, dev: &Device, verbose: bool) {
     out.push_str("    Thermal\n");
     let Some(h) = &dev.hwmon else {
         out.push_str("        (none exposed)\n");
@@ -306,34 +311,51 @@ fn thermal_block(out: &mut String, dev: &Device) {
         return;
     }
     for t in &h.temps {
-        let mut limits: Vec<String> = Vec::new();
-        if let Some(m) = t.max_mc {
-            limits.push(format!("max {}", mc_to_c(m)));
+        match t.input_avail() {
+            Avail::Value(input_mc) => {
+                let mut limits: Vec<String> = Vec::new();
+                if let Some(m) = t.max_mc {
+                    limits.push(format!("max {}", mc_to_c(m)));
+                }
+                if let Some(c) = t.crit_mc {
+                    limits.push(format!("crit {}", mc_to_c(c)));
+                }
+                if let Some(e) = t.emergency_mc {
+                    limits.push(format!("emergency {}", mc_to_c(e)));
+                }
+                let v = format!("{} C", mc_to_c(input_mc));
+                let v = if limits.is_empty() {
+                    v
+                } else {
+                    format!("{v} ({})", limits.join(", "))
+                };
+                kv(out, 8, &t.label, &v);
+            }
+            Avail::NotAvailable(rs) => {
+                let field = match t.label.to_ascii_lowercase().as_str() {
+                    s if s.contains("mem") => "temp.vram",
+                    s if s.contains("mctrl") => "temp.mctrl",
+                    s if s.contains("pcie") => "temp.pcie",
+                    _ => "temp.pkg",
+                };
+                kv_av_why(out, 8, &t.label, None, Some(&rs), field, verbose);
+            }
         }
-        if let Some(c) = t.crit_mc {
-            limits.push(format!("crit {}", mc_to_c(c)));
-        }
-        if let Some(e) = t.emergency_mc {
-            limits.push(format!("emergency {}", mc_to_c(e)));
-        }
-        let v = format!("{} C", mc_to_c(t.input_mc));
-        let v = if limits.is_empty() {
-            v
-        } else {
-            format!("{v} ({})", limits.join(", "))
-        };
-        kv(out, 8, &t.label, &v);
     }
 }
 
 fn power_block(out: &mut String, r: &Report<'_>, dev: &Device, view: &View<'_>) {
     out.push_str("    Power\n");
     let ms = view.rates.map(|x| x.dt_ms).unwrap_or(0);
+    let broken = dev.rpm_broken().then(|| dev.rpm_broken_reason());
     let energy2 = dev
         .hwmon
         .as_ref()
         .is_some_and(|h| h.dir.join("energy2_input").exists());
     let draw = |a: &Avail<f64>| {
+        if broken.is_some() {
+            return None; // the energy counter is frozen while the device is powered down
+        }
         a.value()
             .map(|v| format!("{v:.2} W (energy delta over {ms} ms)"))
     };
@@ -343,7 +365,7 @@ fn power_block(out: &mut String, r: &Report<'_>, dev: &Device, view: &View<'_>) 
             8,
             "Draw card",
             draw(&rates.draw_card_w),
-            reason_of(&rates.draw_card_w),
+            reason_of(&rates.draw_card_w).or(broken.as_ref()),
             "power.draw",
             r.verbose,
         );
@@ -353,7 +375,7 @@ fn power_block(out: &mut String, r: &Report<'_>, dev: &Device, view: &View<'_>) 
                 8,
                 "Draw pkg",
                 draw(&rates.draw_pkg_w),
-                reason_of(&rates.draw_pkg_w),
+                reason_of(&rates.draw_pkg_w).or(broken.as_ref()),
                 "power.draw.pkg",
                 r.verbose,
             );
@@ -659,7 +681,22 @@ fn gt_block(out: &mut String, r: &Report<'_>, view: &View<'_>, gt: &crate::probe
         "utilization.gt",
         r.verbose,
     );
-    kv_av(out, 8, "Idle status", s_avail(&gt.idle_status), r.verbose);
+    let idle = gt.idle_state();
+    let idle_text = match (idle.value(), gt.idle_status.value()) {
+        (Some(d), Some(f)) if d != f && r.verbose => {
+            Some(format!("{d} (idle_status file reads {f})"))
+        }
+        _ => idle.value().cloned(),
+    };
+    kv_av_why(
+        out,
+        8,
+        "Idle status",
+        idle_text,
+        idle.or_reason().err(),
+        "idle.status",
+        r.verbose,
+    );
     kv_av(out, 8, "Power profile", s_avail(&gt.profile), r.verbose);
     let reasons = match &gt.throttle_reasons {
         Avail::Value(rs) if rs.is_empty() => Some("none".to_string()),
@@ -679,6 +716,10 @@ fn gt_block(out: &mut String, r: &Report<'_>, view: &View<'_>, gt: &crate::probe
 
 fn fans_block(out: &mut String, dev: &Device) {
     out.push_str("    Fans\n");
+    if dev.rpm_broken() {
+        out.push_str("        (unreliable: the device runtime power state reports error)\n");
+        return;
+    }
     match dev.hwmon.as_ref().map(|h| &h.fans) {
         Some(fans) if !fans.is_empty() => {
             for (id, rpm) in fans {

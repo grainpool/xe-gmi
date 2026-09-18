@@ -53,6 +53,8 @@ pub struct Placement {
     pub path: Vec<String>,
     pub host_bridge: Avail<String>,
     pub root_port: Avail<String>,
+    /// sysfs directory of `root_port` when one was identified (link and ASPM reads live there).
+    pub root_port_dir: Option<PathBuf>,
     pub reset_methods: Avail<String>,
     pub sriov: Option<SriovPf>,
     /// For a VF: the PF address (from `physfn`).
@@ -74,6 +76,7 @@ impl Default for Placement {
             path: Vec::new(),
             host_bridge: na(),
             root_port: na(),
+            root_port_dir: None,
             reset_methods: na(),
             sriov: None,
             vf_of: na(),
@@ -252,6 +255,7 @@ impl Placement {
             path,
             host_bridge,
             root_port,
+            root_port_dir: rp_dir,
             reset_methods: sysfs::read_string(&dev_dir.join("reset_method")),
             sriov,
             vf_of,

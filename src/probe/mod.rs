@@ -5,14 +5,14 @@ pub mod hwmon;
 pub mod pci;
 pub mod placement;
 
-use crate::avail::Avail;
+use crate::avail::{Avail, Reason};
 use crate::error::{Error, Result};
 use crate::paths::Roots;
 use crate::pciids;
 use crate::sysfs;
 use gt::Gt;
 pub use hwmon::{Hwmon, TempSensor};
-pub use pci::{PciIds, PcieLink, VramSource, VramTotal};
+pub use pci::{PciIds, PciPower, PcieLink, VramSource, VramTotal};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
@@ -25,14 +25,35 @@ pub struct Device {
     pub ids: PciIds,
     pub name: String,
     pub link: Avail<PcieLink>,
+    /// `pci.link.*` provenance: the endpoint or its root port (Arc artifact, KB 000094587).
+    pub link_via: &'static str,
     pub vram_total: Avail<VramTotal>,
     pub hwmon: Option<Hwmon>,
     pub gts: Vec<Gt>,
     pub d3cold_threshold_mib: Avail<u64>,
+    pub power: PciPower,
     pub placement: placement::Placement,
     /// Device queries through the kernel interface (N/A without a render node; everything else
     /// keeps working). See `src/kabi`.
     pub kabi: crate::kabi::Kabi,
+}
+
+impl Device {
+    /// The runtime-PM machine sits in `error` when a transition failed; kernel reads made
+    /// against the device then return powered-down sentinels (255 °C, fan 0, a frozen
+    /// energy counter), which this tool must report as unavailable, not as measurements.
+    pub fn rpm_broken(&self) -> bool {
+        self.power
+            .runtime_status
+            .value()
+            .is_some_and(|s| s == "error")
+    }
+
+    pub fn rpm_broken_reason(&self) -> Reason {
+        Reason::Detail(
+            "sensor reads are unreliable while the device runtime power state reports error".into(),
+        )
+    }
 }
 
 fn digit_suffix(name: &str, prefix: &str) -> bool {
@@ -50,6 +71,12 @@ fn tail_component(p: &Path) -> Option<String> {
 pub fn discover(roots: &Roots) -> Vec<Device> {
     let drm = roots.sysfs.join("class/drm");
     let render_nodes = sysfs::list_dir(&drm, |n| digit_suffix(n, "renderD"));
+    // System-wide, read once: the bracketed ASPM policy selection.
+    let policy_file = roots.sysfs.join("module/pcie_aspm/parameters/policy");
+    let aspm_policy = match sysfs::read_string(&policy_file) {
+        Avail::Value(text) => gt::parse_profile_brackets(&policy_file, &text),
+        Avail::NotAvailable(r) => Avail::NotAvailable(r),
+    };
     let mut devs: Vec<Device> = Vec::new();
     for card in sysfs::list_dir(&drm, |n| digit_suffix(n, "card")) {
         let card_name = match tail_component(&card) {
@@ -86,15 +113,28 @@ pub fn discover(roots: &Roots) -> Vec<Device> {
             continue;
         };
         let name = pciids::device_name(roots, ids.vendor, ids.device);
+        let placement = placement::Placement::read(&dev_dir, &pci);
+        let (link, link_via) = pci::resolve_link(
+            pci::read_link(&dev_dir),
+            placement.root_port_dir.as_ref().map(|d| pci::read_link(d)),
+        );
+        let power = pci::read_pci_power(&dev_dir, placement.root_port_dir.as_deref(), &aspm_policy);
+        let rpm_error = power
+            .runtime_status
+            .value()
+            .map(|s| s == "error")
+            .unwrap_or(false);
         devs.push(Device {
             index: 0,
-            link: pci::read_link(&dev_dir),
+            link,
+            link_via,
             vram_total: pci::vram_total(&dev_dir, ids.device),
             hwmon: hwmon::discover_hwmon(&dev_dir),
             gts: gt::discover_gts(&dev_dir),
             d3cold_threshold_mib: sysfs::read_u64(&dev_dir.join("vram_d3cold_threshold")),
-            placement: placement::Placement::read(&dev_dir, &pci),
-            kabi: crate::kabi::Kabi::read(roots, &pci, &card_name, render.as_deref()),
+            power,
+            placement,
+            kabi: crate::kabi::Kabi::read(roots, &pci, &card_name, render.as_deref(), rpm_error),
             pci,
             dev_dir,
             card: card_name,

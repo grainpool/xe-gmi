@@ -170,6 +170,30 @@ pub fn wedged_message(roots: &Roots, pci: &str) -> Option<String> {
     last_wedged.or(last_any).map(|m| format!("{pci} {m}"))
 }
 
+/// The most recent kernel-log complaint that this device's runtime PM accounting went wrong
+/// (`usage count underflow`): every sensor read then gets refused into powered-down sentinels.
+pub fn runtime_pm_complaint(roots: &Roots, pci: &str) -> Option<String> {
+    let path = roots.kmsg.as_ref()?;
+    let text = read_kmsg(path).ok()?;
+    let prefix = format!("xe {pci}: ");
+    let mut last: Option<String> = None;
+    for line in text.lines() {
+        let Some((_, msg)) = line.split_once(";") else {
+            continue;
+        };
+        let Some(rest) = msg.strip_prefix(&prefix) else {
+            continue;
+        };
+        if clean_drm(rest)
+            .to_lowercase()
+            .contains("usage count underflow")
+        {
+            last = Some(clean_drm(rest));
+        }
+    }
+    last.map(|m| format!("{pci} {m}"))
+}
+
 fn read_kmsg(path: &Path) -> Result<String> {
     use std::os::unix::fs::OpenOptionsExt;
     let mut f = std::fs::OpenOptions::new()

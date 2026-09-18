@@ -37,6 +37,20 @@ fn mhz(dir: &Path, name: &str) -> Avail<u32> {
     sysfs::read_u64(&dir.join(name)).map(|v| v.min(u32::MAX as u64) as u32)
 }
 
+impl Gt {
+    /// The GT's C-state, told honestly. `act_freq` reads 0 while the GT is parked in C6
+    /// (kernel comment in `xe_guc_pc_get_act_freq`), while `gtidle/idle_status` mirrors a
+    /// register that keeps reporting `gt-c0` after the park on Battlemage. The raw file
+    /// stays available for the verbose annotation (`idle_status`).
+    pub fn idle_state(&self) -> Avail<String> {
+        match self.act.value() {
+            Some(0) => Avail::Value("gt-c6".to_string()),
+            Some(_) => Avail::Value("gt-c0".to_string()),
+            None => self.idle_status.clone(),
+        }
+    }
+}
+
 /// `tile<T>/gt<G>` sorted by (tile, gt).
 pub fn discover_gts(dev_dir: &Path) -> Vec<Gt> {
     let mut found: Vec<(u32, u32, PathBuf)> = Vec::new();
@@ -197,7 +211,56 @@ pub fn reason_files(throttle_dir: &Path) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::parse_profile_brackets as parse_profile;
+    use super::GtKind;
     use super::{derive_reasons_from_flags, parse_reasons_file, Path};
+    use crate::avail::{Avail, Reason};
+    use std::path::PathBuf;
+
+    fn gt(act: Option<u32>, file: Option<&str>) -> super::Gt {
+        fn na<T>() -> Avail<T> {
+            Avail::NotAvailable(Reason::Missing(PathBuf::new()))
+        }
+        super::Gt {
+            id: 0,
+            tile: 0,
+            dir: PathBuf::new(),
+            kind: GtKind::Render,
+            idle_name: na(),
+            act: act.map(Avail::Value).unwrap_or_else(na),
+            cur: na(),
+            min: na(),
+            max: na(),
+            rp0: na(),
+            rpe: na(),
+            rpn: na(),
+            rpa: na(),
+            profile: na(),
+            throttle_status: na(),
+            throttle_reasons: na(),
+            idle_status: file.map(|s| Avail::Value(s.to_string())).unwrap_or_else(na),
+            idle_ms: na(),
+        }
+    }
+
+    #[test]
+    fn idle_state_prefers_the_act_freq_truth() {
+        // The Battlemage combination: parked GT (act 0) while the file still says c0.
+        assert_eq!(
+            gt(Some(0), Some("gt-c0")).idle_state().value(),
+            Some(&"gt-c6".to_string())
+        );
+        // Active GT: c0 regardless of what the mirror file last said.
+        assert_eq!(
+            gt(Some(1200), Some("gt-c0")).idle_state().value(),
+            Some(&"gt-c0".to_string())
+        );
+        // No act_freq at all: the raw file is all there is.
+        assert_eq!(
+            gt(None, Some("gt-c0")).idle_state().value(),
+            Some(&"gt-c0".to_string())
+        );
+        assert!(gt(None, None).idle_state().value().is_none());
+    }
 
     #[test]
     fn parse_profile_brackets() {

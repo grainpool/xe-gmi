@@ -1,4 +1,6 @@
 GPU 0 [0000:e3:00.0]
   Link                     : gen4 x16 (max gen5 x16)
+  Power                    : state N/A, runtime active, D3cold allowed N/A
+  ASPM                     : policy N/A, L1 device N/A, L1 root port N/A
   AER (endpoint)           : N/A (no AER statistics exposed for this device)
   Root port                : N/A (no root port between the host bridge and the device)

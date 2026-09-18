@@ -294,6 +294,29 @@ fn cap_lines(roots: &Roots, dev: &Device, scan: &proc_scan::Scan) -> Vec<(&'stat
         None => "not writable: hwmon not exposed (kernel 6.15+)".to_string(),
     };
     out.push(("power limit", pl));
+    let nv = |a: &Avail<String>| a.value().cloned().unwrap_or_else(|| "n/a".to_string());
+    let d3 = match dev.power.d3cold_allowed.value() {
+        Some(1) => "yes",
+        Some(_) => "no",
+        None => "n/a",
+    };
+    out.push((
+        "power state",
+        format!(
+            "{} / runtime {} / D3cold allowed {d3}",
+            nv(&dev.power.state),
+            nv(&dev.power.runtime_status)
+        ),
+    ));
+    out.push((
+        "aspm",
+        format!(
+            "policy {}, L1 endpoint {}, L1 root port {}",
+            nv(&dev.power.policy),
+            nv(&dev.power.l1_endpoint),
+            nv(&dev.power.l1_root_port)
+        ),
+    ));
     let crit = h
         .and_then(|h| h.card.crit.value())
         .map(|uw| format!("{:.2} W (read-only in xe-gmi)", *uw as f64 / 1e6))
@@ -487,8 +510,13 @@ fn cap_lines(roots: &Roots, dev: &Device, scan: &proc_scan::Scan) -> Vec<(&'stat
                 "kernel log (wedged)",
                 "N/A (needs root to read the kernel log)".to_string(),
             ));
-        } else if let Some(m) = crate::crash::wedged_message(roots, &dev.pci) {
-            out.push(("kernel log (wedged)", m));
+        } else {
+            if let Some(m) = crate::crash::wedged_message(roots, &dev.pci) {
+                out.push(("kernel log (wedged)", m));
+            }
+            if let Some(m) = crate::crash::runtime_pm_complaint(roots, &dev.pci) {
+                out.push(("kernel log (runtime PM)", m));
+            }
         }
     }
     out

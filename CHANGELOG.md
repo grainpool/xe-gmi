@@ -3,6 +3,35 @@
 All notable changes to xe-gmi are documented here. The format follows Keep a Changelog; versions
 follow SemVer. JSON output is versioned separately (`schema_version`, currently 1).
 
+## [0.2.2] — 2026-09-18
+
+### Added
+- Read-only PCIe power fields `pci.power_state`, `pci.runtime_status`, `pci.d3cold_allowed`,
+  `pci.aspm.policy`, `pci.aspm.l1`; `pcie` gains Power and ASPM lines, `doctor` gains the matching
+  capability lines. xe-gmi still never writes runtime-PM files (docs/hardware-safety.md).
+- `pcie`/`info` resolve the link **via the root port**: the Arc endpoint's own `current/max_link_*`
+  nodes carry the Intel KB 000094587 artifact (gen1 x1 on a Gen5 x16 card) and no longer override
+  the root port's trained view; when only the endpoint nodes exist they are annotated as such.
+- `doctor` scans the kernel log for the driver's `Runtime PM usage count underflow!` records and
+  lists them per device, so a wedged power state is visible before a polling loop hammers it.
+- Fixture `b65-g31-k7.1-d3cold` (+ `-t1`): a card parked in D3cold with bus-sentinel hwmon reads,
+  the KB 000094587 artifact, the lying `idle_status` mirror and kmsg underflow records; golden and
+  behavioural tests against it.
+
+### Changed
+- `idle.status` is derived: `clock.act == 0` decides for a parked GT because `gtidle/idle_status`
+  keeps mirroring `gt-c0` after the park (proven on hardware).
+- Powered-down sentinel reads are gated: while `power/runtime_status` reads `error`, `255` °C,
+  fan 0 and sentinel power answer as N/A with the runtime-state reason, never as measurements.
+
+### Fixed
+- `src/kabi`: an `EINVAL` from a DRM query is no longer always called "not supported by this
+  kernel" — when the device's runtime-PM status read `error` at open time the message names both
+  readings (the same errno means an ioctl refused during a broken power state); a replay file that
+  exists but cannot be read is reported as such instead of "not supported".
+- `src/kabi`: a microcontroller that answers the firmware query with an all-zero version is
+  reported N/A ("this microcontroller is not loaded") instead of version `0.0.0`.
+
 ## [0.2.1] — 2026-09-17
 
 ### Fixed

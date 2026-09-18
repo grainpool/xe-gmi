@@ -207,8 +207,13 @@ fn link_line(dev: &Device) -> String {
         Some(l) => {
             let g = |o: Option<u8>| o.map(|v| v.to_string()).unwrap_or_else(|| NA.into());
             let w = |o: Option<u32>| o.map(|v| v.to_string()).unwrap_or_else(|| NA.into());
+            let via = if dev.link_via == crate::probe::pci::LINK_VIA_ROOT_PORT {
+                " via root port"
+            } else {
+                ""
+            };
             format!(
-                "gen{} x{} (max gen{} x{})",
+                "gen{} x{} (max gen{} x{}){via}",
                 g(l.gen_cur),
                 w(l.width_cur),
                 g(l.gen_max),
@@ -217,6 +222,31 @@ fn link_line(dev: &Device) -> String {
         }
         None => NA.into(),
     }
+}
+
+fn power_line(dev: &Device) -> String {
+    let s = |a: &crate::avail::Avail<String>| a.value().cloned().unwrap_or_else(|| NA.into());
+    let d3 = dev
+        .power
+        .d3cold_allowed
+        .value()
+        .map(|v| if *v == 1 { "yes" } else { "no" })
+        .unwrap_or(NA);
+    format!(
+        "state {}, runtime {}, D3cold allowed {d3}",
+        s(&dev.power.state),
+        s(&dev.power.runtime_status)
+    )
+}
+
+fn aspm_line(dev: &Device) -> String {
+    let s = |a: &crate::avail::Avail<String>| a.value().cloned().unwrap_or_else(|| NA.into());
+    format!(
+        "policy {}, L1 device {}, L1 root port {}",
+        s(&dev.power.policy),
+        s(&dev.power.l1_endpoint),
+        s(&dev.power.l1_root_port)
+    )
 }
 
 fn totals_line(c: &str, n: &str, f: &str) -> String {
@@ -228,6 +258,8 @@ pub fn pcie_text(devs: &[&Device]) -> String {
     for d in devs {
         out.push_str(&format!("GPU {} [{}]\n", d.index, d.pci));
         kv25(&mut out, "Link", &link_line(d));
+        kv25(&mut out, "Power", &power_line(d));
+        kv25(&mut out, "ASPM", &aspm_line(d));
         match &d.placement.aer {
             Some(a) => {
                 let t = |x: &crate::avail::Avail<u64>| {
@@ -301,6 +333,7 @@ pub fn pcie_json(devs: &[&Device], ts: &str) -> String {
                         ("gen_max".into(), n8(l.gen_max)),
                         ("width_current".into(), n32(l.width_cur)),
                         ("width_max".into(), n32(l.width_max)),
+                        ("source".into(), Json::Str(d.link_via.to_string())),
                     ])
                 });
                 let aer = d.placement.aer.as_ref().map(|a| {
@@ -333,6 +366,23 @@ pub fn pcie_json(devs: &[&Device], ts: &str) -> String {
                     ])
                 });
                 let rp_aer = d.placement.root_port_aer.as_ref().map(totals_json);
+                let power = Json::Obj(vec![
+                    ("state".into(), srt(d.power.state.value())),
+                    ("runtime_status".into(), srt(d.power.runtime_status.value())),
+                    (
+                        "d3cold_allowed".into(),
+                        d.power
+                            .d3cold_allowed
+                            .value()
+                            .map(|v| Json::Bool(*v == 1))
+                            .unwrap_or(Json::Null),
+                    ),
+                ]);
+                let aspm = Json::Obj(vec![
+                    ("policy".into(), srt(d.power.policy.value())),
+                    ("l1_endpoint".into(), srt(d.power.l1_endpoint.value())),
+                    ("l1_root_port".into(), srt(d.power.l1_root_port.value())),
+                ]);
                 Json::Obj(vec![
                     ("pci_address".into(), Json::Str(d.pci.clone())),
                     (
@@ -342,6 +392,8 @@ pub fn pcie_json(devs: &[&Device], ts: &str) -> String {
                             ("aer".into(), aer.unwrap_or(Json::Null)),
                             ("root_port".into(), srt(d.placement.root_port.value())),
                             ("root_port_aer".into(), rp_aer.unwrap_or(Json::Null)),
+                            ("power".into(), power),
+                            ("aspm".into(), aspm),
                         ]),
                     ),
                 ])

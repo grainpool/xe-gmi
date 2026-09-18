@@ -65,7 +65,7 @@ own to run `tests/cli_captured.rs`). PCI topology `0000:e3:00.0`, `8086:e222`:
 | GTs | `tile0/gt0` (render, gtidle `gt0-rc`) and `tile0/gt1` (media, `gt1-mc`) |
 | Clock boot values | gt0 min 1200 / max 2400 (rpn 400, rp0 2400 — **not** the 2850 of the synthetic B65 sample); gt1 min 400 / max 1500 (rpn 400, rp0 1500) |
 | hwmon | `hwmon6` (`name=xe`): `power1_cap` 200000000 (PL2 only — no `power1_max` at all), `power1_crit` 400000000, `power1_cap_interval` 15, `energy1_input` + `energy1_label=card` |
-| PCIe link | `2.5 GT/s PCIe` ×1 current **and** max in the capture — the link was in a low-power state at capture time; xe-gmi reports these values as-is |
+| PCIe link | `2.5 GT/s PCIe` ×1 current **and** max in the capture — the Intel KB 000094587 endpoint artifact, not a trained-down link; since 0.2.2 xe-gmi reports the root port's trained gen5 ×16 view (`via root port`) and annotates the endpoint's own nodes |
 
 `tests/cli_captured.rs` checks the same facts against whatever capture is present locally.
 

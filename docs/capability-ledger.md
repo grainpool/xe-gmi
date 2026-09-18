@@ -16,7 +16,7 @@ only route is debugfs/ioctl/firmware and is excluded by this product's safety ru
 | Device enumeration, index, PCI address | mapped | `list`, `index`, `pci.address` |
 | Product name | mapped | pci.ids lookup + fallback table |
 | Vendor/device/subsystem/revision IDs | mapped | `pci.*` |
-| PCIe generation and width, current and max | mapped | `pci.link.*` |
+| PCIe generation and width, current and max | mapped | `pci.link.*`; since 0.2.2 resolved via the root port when the endpoint carries the KB 000094587 artifact |
 | Kernel/driver version | mapped | `driver.kernel`; the xe module carries no separate version |
 | Firmware versions (GuC/HuC/GSC) | mapped (0.2.0, GuC/HuC) | `firmware`, `firmware.guc/huc` from the DRM `UC_FW_VERSION` query (6.9+); GSC stays debugfs-only, no sysfs interface |
 | VBIOS/OPROM version, board serial, UUID, part number | N/A-interface | nothing in sysfs |
@@ -41,7 +41,8 @@ only route is debugfs/ioctl/firmware and is excluded by this product's safety ru
 | Memory-bandwidth utilization | N/A-interface | |
 | Encoder/decoder sessions | N/A-interface | per-client `vcs`/`vecs` utilization is the nearest data |
 | Throttle status and reasons | mapped | `throttle.*` |
-| Performance state | N/A-interface | no P-state notion; `clock.act`/`clock.cur` and `idle.status` carry the information |
+| Performance state | N/A-interface | no P-state notion; `clock.act`/`clock.cur` and `idle.status` carry the information; `idle.status` is derived from `clock.act == 0` since 0.2.2 (the `gtidle/idle_status` mirror lies for a parked GT) |
+| Device power state, runtime-PM status, D3cold policy, ASPM | mapped (0.2.2) | `pci.power_state`, `pci.runtime_status`, `pci.d3cold_allowed`, `pci.aspm.policy`, `pci.aspm.l1`; read-only, never written (docs/hardware-safety.md); `runtime_status=error` names the driver's underflow wedge and gates the bus-sentinel reads |
 | VRAM total | mapped (0.2.0) | kernel allocator view via the DRM `MEM_REGIONS` query (`info` memory block, `memory.total`); fdinfo-text fallback stays documented in the status legend |
 | VRAM used (device-level) | mapped (0.2.0) | `memory.used` from the `MEM_REGIONS` query through the `src/kabi` unsafe boundary (docs/kabi.md); kernel < 7.0 reports 0 without CAP_PERFMON and xe-gmi says so instead of lying |
 | VRAM per process | mapped | `processes` |

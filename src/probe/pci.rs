@@ -13,7 +13,7 @@ pub struct PciIds {
     pub class: Avail<u32>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PcieLink {
     pub gen_cur: Option<u8>,
     pub gen_max: Option<u8>,
@@ -102,6 +102,71 @@ pub fn read_link(dev_dir: &Path) -> Avail<PcieLink> {
         return Avail::NotAvailable(Reason::Missing(dev_dir.join("current_link_speed")));
     }
     Avail::Value(link)
+}
+
+/// Which PCI node a reported link was read from. Intel Arc cards carry an internal PCIe
+/// switch; the nodes near the GPU always report Gen1 x1 regardless of the trained link
+/// (Intel KB 000094587), so the root port's view wins whenever it is available there.
+pub const LINK_VIA_ENDPOINT: &str = "endpoint";
+pub const LINK_VIA_ROOT_PORT: &str = "root port";
+
+/// The always-Gen1-x1 endpoint reading from Intel KB 000094587 (current and maximum both
+/// pinned to gen1 x1 — a real negotiated link never reports a maximum of gen1 x1 on a GPU).
+pub fn is_gen1_artifact(l: &PcieLink) -> bool {
+    l.gen_cur == Some(1) && l.gen_max == Some(1) && l.width_cur == Some(1) && l.width_max == Some(1)
+}
+
+/// Prefer the root port's link when the endpoint carries the Arc internal-switch artifact
+/// (or exposes nothing at all); otherwise keep the endpoint's view of the same link.
+pub fn resolve_link(
+    endpoint: Avail<PcieLink>,
+    root_port: Option<Avail<PcieLink>>,
+) -> (Avail<PcieLink>, &'static str) {
+    if let Some(Avail::Value(rp)) = &root_port {
+        let take_rp = match &endpoint {
+            Avail::NotAvailable(_) => true,
+            Avail::Value(ep) => is_gen1_artifact(ep),
+        };
+        if take_rp {
+            return (Avail::Value(rp.clone()), LINK_VIA_ROOT_PORT);
+        }
+    }
+    (endpoint, LINK_VIA_ENDPOINT)
+}
+
+/// PCI power management and ASPM state, all plain sysfs reads (`pci-sysfs`/`sysfs`):
+/// the device's power state, its runtime-PM status, whether D3cold is allowed, the
+/// system ASPM policy, and the negotiated L1 state at each end of the link.
+#[derive(Debug)]
+pub struct PciPower {
+    /// `power_state`: D0 / D3hot / D3cold.
+    pub state: Avail<String>,
+    /// `power/runtime_status`: active / suspended / resuming / suspending / error / no,
+    pub runtime_status: Avail<String>,
+    /// `power/d3cold_allowed`: 1 = the kernel may cut slot power in D3cold.
+    pub d3cold_allowed: Avail<u64>,
+    /// `link/l1_aspm` on the device (`enabled`/`disabled`); absent without an upstream bridge.
+    pub l1_endpoint: Avail<String>,
+    /// `link/l1_aspm` on the root port.
+    pub l1_root_port: Avail<String>,
+    /// The bracketed selection in `/sys/module/pcie_aspm/parameters/policy`, system-wide.
+    pub policy: Avail<String>,
+}
+
+pub fn read_pci_power(dev_dir: &Path, rp_dir: Option<&Path>, policy: &Avail<String>) -> PciPower {
+    PciPower {
+        state: sysfs::read_string(&dev_dir.join("power_state")),
+        runtime_status: sysfs::read_string(&dev_dir.join("power/runtime_status")),
+        d3cold_allowed: sysfs::read_u64(&dev_dir.join("power/d3cold_allowed")),
+        l1_endpoint: sysfs::read_string(&dev_dir.join("link/l1_aspm")),
+        l1_root_port: match rp_dir {
+            Some(d) => sysfs::read_string(&d.join("link/l1_aspm")),
+            None => Avail::NotAvailable(Reason::NotSupported(
+                "no root port between the host bridge and the device",
+            )),
+        },
+        policy: policy.clone(),
+    }
 }
 
 /// `2.5 GT/s PCIe` → 1 … `64.0 GT/s PCIe` → 6; `Unknown speed` (or anything unknown) → None.
@@ -232,5 +297,44 @@ mod tests {
         assert_eq!(parse_hex_u64("0x8086"), Some(0x8086));
         assert_eq!(parse_hex_u64("0x030000"), Some(0x030000));
         assert_eq!(parse_hex_u64("0xe222"), Some(0xe222));
+    }
+
+    fn link(cur: u8, max: u8, wc: u32, wm: u32) -> crate::avail::Avail<super::PcieLink> {
+        crate::avail::Avail::Value(super::PcieLink {
+            gen_cur: Some(cur),
+            gen_max: Some(max),
+            width_cur: Some(wc),
+            width_max: Some(wm),
+        })
+    }
+
+    #[test]
+    fn root_port_wins_for_the_gen1_artifact_only() {
+        use super::{resolve_link, LINK_VIA_ENDPOINT, LINK_VIA_ROOT_PORT};
+        let artifact = link(1, 1, 1, 1);
+        let rp = link(5, 5, 16, 16);
+        let (l, via) = resolve_link(artifact.clone(), Some(rp.clone()));
+        assert_eq!(via, LINK_VIA_ROOT_PORT);
+        assert_eq!(l.value().unwrap().gen_cur, Some(5));
+        // A real endpoint reading is kept even when the root port also reports.
+        let healthy = link(4, 5, 16, 16);
+        let (_, via) = resolve_link(healthy, Some(rp.clone()));
+        assert_eq!(via, LINK_VIA_ENDPOINT);
+        // No root port at all: endpoint as before.
+        let (_, via) = resolve_link(artifact.clone(), None);
+        assert_eq!(via, LINK_VIA_ENDPOINT);
+        // Endpoint exposes nothing but the root port does: the root port answers.
+        let missing = crate::avail::Avail::NotAvailable(crate::avail::Reason::Missing(
+            std::path::PathBuf::from("current_link_speed"),
+        ));
+        let (l, via) = resolve_link(missing, Some(rp));
+        assert_eq!(via, LINK_VIA_ROOT_PORT);
+        assert_eq!(l.value().unwrap().width_cur, Some(16));
+        // Root port present but itself reporting nothing usable: endpoint stays.
+        let rp_missing = crate::avail::Avail::NotAvailable(crate::avail::Reason::Missing(
+            std::path::PathBuf::from("current_link_speed"),
+        ));
+        let (_, via) = resolve_link(artifact, Some(rp_missing));
+        assert_eq!(via, LINK_VIA_ENDPOINT);
     }
 }
