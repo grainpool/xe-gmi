@@ -1,0 +1,4 @@
+GPU 0 [0000:e3:00.0]
+  Link                     : gen4 x16 (max gen5 x16)
+  AER (endpoint)           : N/A (no AER statistics exposed for this device)
+  Root port                : N/A (no root port between the host bridge and the device)

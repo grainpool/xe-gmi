@@ -1,0 +1,11 @@
+xe-gmi 0.2.0 | driver xe | kernel 7.1.4-200.fc43.x86_64 | 2026-09-14T10:22:31Z
++-----+------------------------------+--------------+----------+------------------+----------------+
+| Idx | Device                       | Bus Id       | Temp C   | Power W          | Memory MiB     |
+| GT  | Clock MHz                    | Profile      | Util %   | Throttle         | Fan RPM        |
++=====+==============================+==============+==========+==================+================+
+| 0   | Battlemage G31 [Arc Pro B65] | 0000:e3:00.0 | 41 / 38  | 12.40 / 200.00   | 1088 / 32768   |
+| gt0 | 1200 / 2850                  | base         | 5.0      | none             | 1200           |
+| gt1 | 300 / 2400                   | base         | 0.0      | none             |                |
++-----+------------------------------+--------------+----------+------------------+----------------+
+Temp = pkg / vram; Power = draw / limit; Memory = used / total; Clock = cur / max.
+Memory used = resident VRAM summed over visible DRM clients (run as root to see every user).

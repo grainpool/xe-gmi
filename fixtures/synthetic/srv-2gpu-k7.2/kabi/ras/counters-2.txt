@@ -1,0 +1,2 @@
+1 core-compute 0
+2 soc-internal 0

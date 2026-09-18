@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/grainpool/xe-gmi/schema/xe-gmi-v1.schema.json",
+  "title": "xe-gmi JSON output, schema version 1",
+  "description": "Every xe-gmi --json document is one of the oneOf branches below. Within schema version 1 changes are additive only: consumers must ignore unknown keys. N/A values are null.",
+  "oneOf": [
+    { "$ref": "#/$defs/report" },
+    { "$ref": "#/$defs/query" },
+    { "$ref": "#/$defs/processes" },
+    { "$ref": "#/$defs/doctor" },
+    { "$ref": "#/$defs/fields" },
+    { "$ref": "#/$defs/changes" },
+    { "$ref": "#/$defs/persist_show" }
+  ],
+  "$defs": {
+    "w": { "type": ["number", "null"], "description": "watts, 2 decimals" },
+    "pct": { "type": ["number", "null"], "description": "percent, 1 decimal" },
+    "u": { "type": ["integer", "null"] },
+    "s": { "type": ["string", "null"] },
+    "report": {
+      "type": "object",
+      "required": ["schema_version", "tool", "generated_at", "kernel", "driver", "devices", "unavailable"],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "tool": { "type": "object", "properties": { "name": { "const": "xe-gmi" }, "version": { "type": "string" } } },
+        "generated_at": { "type": "string", "format": "date-time" },
+        "kernel": { "type": "string" },
+        "driver": { "const": "xe" },
+        "devices": { "type": "array", "items": { "$ref": "#/$defs/device" } },
+        "unavailable": { "type": "array", "items": { "type": "object", "properties": { "device": { "type": "string" }, "field": { "type": "string" }, "reason": { "type": "string" } } } }
+      }
+    },
+    "device": {
+      "type": "object",
+      "required": ["index", "pci_address", "name", "pci", "drm", "thermal", "power", "memory", "gts", "fans", "engines", "processes_count", "persistence_installed"],
+      "properties": {
+        "index": { "type": "integer" },
+        "pci_address": { "type": "string", "pattern": "^[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\\.[0-7]$" },
+        "name": { "type": "string" },
+        "pci": { "type": "object", "properties": {
+          "vendor_id": { "type": "string" }, "device_id": { "type": "string" },
+          "subsystem_vendor_id": { "$ref": "#/$defs/s" }, "subsystem_device_id": { "$ref": "#/$defs/s" }, "revision": { "$ref": "#/$defs/s" },
+          "link": { "type": "object", "properties": { "gen_current": { "$ref": "#/$defs/u" }, "gen_max": { "$ref": "#/$defs/u" }, "width_current": { "$ref": "#/$defs/u" }, "width_max": { "$ref": "#/$defs/u" } } } } },
+        "drm": { "type": "object", "properties": { "card": { "type": "string" }, "render": { "$ref": "#/$defs/s" } } },
+        "thermal": { "type": "array", "items": { "type": "object", "properties": { "label": { "type": "string" }, "input_c": { "type": "integer" }, "max_c": { "$ref": "#/$defs/u" }, "crit_c": { "$ref": "#/$defs/u" }, "emergency_c": { "$ref": "#/$defs/u" } } } },
+        "power": { "type": "object", "properties": {
+          "draw_w": { "$ref": "#/$defs/w" }, "draw_pkg_w": { "$ref": "#/$defs/w" }, "sample_ms": { "$ref": "#/$defs/u" },
+          "limit": { "type": "object", "properties": {
+            "effective_w": { "$ref": "#/$defs/w" }, "kind": { "enum": ["pl1", "pl2", null] }, "channel": { "enum": ["card", "pkg", null] },
+            "pl1_w": { "$ref": "#/$defs/w" }, "pl2_w": { "$ref": "#/$defs/w" }, "pl1_pkg_w": { "$ref": "#/$defs/w" }, "pl2_pkg_w": { "$ref": "#/$defs/w" },
+            "pl1_window_ms": { "$ref": "#/$defs/u" }, "pl2_window_ms": { "$ref": "#/$defs/u" }, "crit_w": { "$ref": "#/$defs/w" }, "rated_max_w": { "$ref": "#/$defs/w" } } },
+          "energy_card_j": { "type": ["number", "null"] }, "energy_pkg_j": { "type": ["number", "null"] }, "voltage_pkg_mv": { "$ref": "#/$defs/u" } } },
+        "memory": { "type": "object", "properties": { "total_bytes": { "$ref": "#/$defs/u" }, "total_source": { "enum": ["bar", "table", null] }, "used_bytes": { "type": "integer" }, "used_clients": { "type": "integer" }, "free_bytes": { "$ref": "#/$defs/u" } } },
+        "gts": { "type": "array", "items": { "type": "object", "properties": {
+          "id": { "type": "integer" }, "tile": { "type": "integer" }, "kind": { "enum": ["render", "media", "unknown"] }, "name": { "$ref": "#/$defs/s" },
+          "clock_mhz": { "type": "object", "properties": { "cur": { "$ref": "#/$defs/u" }, "act": { "$ref": "#/$defs/u" }, "min": { "$ref": "#/$defs/u" }, "max": { "$ref": "#/$defs/u" }, "rp0": { "$ref": "#/$defs/u" }, "rpe": { "$ref": "#/$defs/u" }, "rpn": { "$ref": "#/$defs/u" }, "rpa": { "$ref": "#/$defs/u" } } },
+          "utilization_pct": { "$ref": "#/$defs/pct" }, "idle_status": { "$ref": "#/$defs/s" }, "power_profile": { "$ref": "#/$defs/s" },
+          "throttle": { "type": "object", "properties": { "active": { "type": ["boolean", "null"] }, "reasons": { "type": "array", "items": { "type": "string" } } } } } } },
+        "fans": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "integer" }, "rpm": { "$ref": "#/$defs/u" } } } },
+        "engines": { "type": "object", "properties": { "rcs": { "$ref": "#/$defs/pct" }, "ccs": { "$ref": "#/$defs/pct" }, "vcs": { "$ref": "#/$defs/pct" }, "vecs": { "$ref": "#/$defs/pct" }, "bcs": { "$ref": "#/$defs/pct" } } },
+        "processes_count": { "type": "integer" },
+        "persistence_installed": { "type": "boolean" },
+        "boot_default": { "type": ["object", "null"], "description": "get commands only" }
+      }
+    },
+    "query": {
+      "type": "object", "required": ["schema_version", "generated_at", "fields", "rows"],
+      "properties": { "schema_version": { "const": 1 }, "generated_at": { "type": "string" }, "fields": { "type": "array", "items": { "type": "string" } }, "rows": { "type": "array", "items": { "type": "object" } } }
+    },
+    "processes": {
+      "type": "object", "required": ["schema_version", "generated_at", "sample_ms", "visible_all_users", "processes"],
+      "properties": { "schema_version": { "const": 1 }, "generated_at": { "type": "string" }, "sample_ms": { "type": "integer" }, "visible_all_users": { "type": "boolean" },
+        "processes": { "type": "array", "items": { "type": "object", "properties": { "pid": { "type": "integer" }, "name": { "type": "string" }, "pci_address": { "type": "string" }, "client_id": { "type": "integer" }, "resident_vram_bytes": { "type": "integer" }, "total_vram_bytes": { "$ref": "#/$defs/u" }, "active_vram_bytes": { "$ref": "#/$defs/u" },
+          "engine_pct": { "type": "object", "properties": { "rcs": { "$ref": "#/$defs/pct" }, "ccs": { "$ref": "#/$defs/pct" }, "vcs": { "$ref": "#/$defs/pct" }, "vecs": { "$ref": "#/$defs/pct" }, "bcs": { "$ref": "#/$defs/pct" } } } } } } }
+    },
+    "doctor": {
+      "type": "object", "required": ["schema_version", "generated_at", "kernel", "distro", "xe_module", "gpus", "usable_xe_devices", "capabilities", "result"],
+      "properties": { "schema_version": { "const": 1 }, "generated_at": { "type": "string" }, "kernel": { "type": "string" }, "distro": { "$ref": "#/$defs/s" },
+        "xe_module": { "type": "object", "properties": { "state": { "enum": ["loaded", "available_not_loaded", "not_built", "unknown"] }, "path": { "$ref": "#/$defs/s" } } },
+        "gpus": { "type": "array", "items": { "type": "object", "properties": { "pci_address": { "type": "string" }, "vendor_id": { "type": "string" }, "device_id": { "type": "string" }, "driver": { "$ref": "#/$defs/s" }, "verdict": { "type": "string" }, "first_kernel": { "$ref": "#/$defs/s" } } } },
+        "usable_xe_devices": { "type": "integer" },
+        "capabilities": { "type": "array", "items": { "type": "object", "properties": { "pci_address": { "type": "string" } } } },
+        "result": { "enum": ["ok", "no_usable_xe_device"] } }
+    },
+    "fields": {
+      "type": "object", "required": ["schema_version", "fields"],
+      "properties": { "schema_version": { "const": 1 }, "fields": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" }, "unit": { "$ref": "#/$defs/s" }, "available": { "type": "boolean" }, "description": { "type": "string" } } } } }
+    },
+    "changes": {
+      "type": "object", "required": ["schema_version", "generated_at", "changes", "persistence"],
+      "properties": { "schema_version": { "const": 1 }, "generated_at": { "type": "string" },
+        "changes": { "type": "array", "items": { "type": "object", "properties": { "pci_address": { "type": "string" }, "gt": { "$ref": "#/$defs/u" }, "control": { "type": "string" }, "requested": { "type": "string" }, "effective": { "type": "string" }, "raw_written": { "type": "string" }, "raw_readback": { "type": "string" }, "clamped": { "type": "boolean" } } } },
+        "persistence": { "type": "string" } }
+    },
+    "persist_show": {
+      "type": "object", "required": ["schema_version", "installed", "rule_path", "state_path", "entries", "last_apply"],
+      "properties": { "schema_version": { "const": 1 }, "installed": { "type": "boolean" }, "rule_path": { "type": "string" }, "state_path": { "type": "string" },
+        "entries": { "type": "array", "items": { "type": "object", "properties": { "pci_address": { "type": "string" }, "key": { "type": "string" }, "value": { "type": "string" } } } },
+        "last_apply": { "type": ["object", "null"], "properties": { "timestamp": { "type": "string" }, "results": { "type": "array", "items": { "type": "string" } } } } }
+    }
+  }
+}

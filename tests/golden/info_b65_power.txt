@@ -1,0 +1,16 @@
+xe-gmi 0.2.0 report
+Timestamp                       : 2026-09-14T10:22:31Z
+Kernel                          : 7.1.4-200.fc43.x86_64
+Driver                          : xe (module live)
+Devices                         : 1
+
+GPU 0 [0000:e3:00.0]
+    Power
+        Draw card               : 12.40 W (energy delta over 2000 ms)
+        Draw pkg                : 10.00 W (energy delta over 2000 ms)
+        Limit                   : 200.00 W (pl2 card)
+        PL1 sustained card      : N/A
+        PL2 burst card          : 200.00 W (window 15 ms)
+        Critical card           : 400.00 W
+        Energy card             : 123481.589 J
+        Energy pkg              : 98785.432 J

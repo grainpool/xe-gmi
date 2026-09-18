@@ -1,0 +1,60 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  fmt:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: rustfmt }
+      - run: cargo fmt --all -- --check
+  clippy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: clippy }
+      - run: cargo clippy --all-targets --locked -- -D warnings
+  test-msrv:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.75.0
+      - run: cargo test --locked
+  test-stable:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --locked
+  lock-v3-and-deps:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: grep -q '^version = 3$' Cargo.lock
+      - run: |
+          cargo metadata --format-version 1 --no-deps | python3 -c '
+          import json,sys
+          p=[x for x in json.load(sys.stdin)["packages"] if x["name"]=="xe-gmi"][0]
+          bad=[d["name"] for d in p["dependencies"] if d["name"] not in ("clap","clap_complete","clap_mangen")]
+          sys.exit(1 if bad else 0)'
+  static-musl:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: x86_64-unknown-linux-musl }
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - run: RUSTFLAGS="-C target-feature=+crt-static" cargo build --release --locked --target x86_64-unknown-linux-musl
+      - run: scripts/check-static.sh target/x86_64-unknown-linux-musl/release/xe-gmi
+      - run: target/x86_64-unknown-linux-musl/release/xe-gmi doctor || test $? -eq 3
+  publish-dry-run:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo publish --dry-run --locked

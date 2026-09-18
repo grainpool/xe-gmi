@@ -1,0 +1,6 @@
+GPU 0 [0000:e3:00.0]
+  NUMA node                : 0
+  Local CPUs               : 0-31
+  IOMMU group              : 42
+  PCI path                 : pci0000:e3 > 0000:e3:00.0
+  SR-IOV                   : PF, 0 of 7 VFs enabled

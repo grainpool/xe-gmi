@@ -1,0 +1,77 @@
+xe-gmi 0.2.0 report
+Timestamp                       : 2026-09-14T10:22:31Z
+Kernel                          : 7.1.4-200.fc43.x86_64
+Driver                          : xe (module live)
+Devices                         : 1
+
+GPU 0 [0000:e3:00.0]
+    Product name                : Battlemage G31 [Arc Pro B65]
+    PCI id                      : 8086:e222 (subsystem 8086:1100, revision 01)
+    DRM nodes                   : card1, renderD128
+    PCIe link                   : gen4 x16 (max gen5 x16)
+    Persistence                 : not installed
+    Thermal
+        pkg                     : 41 C (max 95, crit 100, emergency 105)
+        vram                    : 38 C (crit 95, emergency 100)
+        mctrl                   : 40 C (crit 100, emergency 105)
+        pcie                    : 39 C (crit 100, emergency 105)
+        vram_ch_0               : 37 C (crit 95, emergency 100)
+        vram_ch_1               : 38 C (crit 95, emergency 100)
+        vram_ch_2               : 39 C (crit 95, emergency 100)
+        vram_ch_3               : 37 C (crit 95, emergency 100)
+        vram_ch_4               : 38 C (crit 95, emergency 100)
+        vram_ch_5               : 39 C (crit 95, emergency 100)
+        vram_ch_6               : 37 C (crit 95, emergency 100)
+        vram_ch_7               : 38 C (crit 95, emergency 100)
+    Power
+        Draw card               : 12.40 W (energy delta over 2000 ms)
+        Draw pkg                : 10.00 W (energy delta over 2000 ms)
+        Limit                   : 200.00 W (pl2 card)
+        PL1 sustained card      : N/A
+        PL2 burst card          : 200.00 W (window 15 ms)
+        Critical card           : 400.00 W
+        Energy card             : 123481.589 J
+        Energy pkg              : 98785.432 J
+    Memory
+        Total                   : 32768 MiB (BAR aperture)
+        Used                    : 1088 MiB (resident VRAM of 2 clients)
+        Free                    : 31680 MiB
+    GT 0 (tile 0, gt0-rc)
+        Clock cur / act         : 1200 / 1200 MHz
+        Clock min / max         : 1200 / 2850 MHz
+        Clock rpn/rpe/rpa/rp0   : 300 / 1800 / 2400 / 2850 MHz
+        Utilization             : 5.0 % (active time over 2000 ms)
+        Idle status             : gt-c0
+        Power profile           : base
+        Throttle                : none
+    GT 1 (tile 0, gt1-mc)
+        Clock cur / act         : 300 / 0 MHz
+        Clock min / max         : 300 / 2400 MHz
+        Clock rpn/rpe/rpa/rp0   : 300 / 1500 / 2100 / 2400 MHz
+        Utilization             : 0.0 % (active time over 2000 ms)
+        Idle status             : gt-c6
+        Power profile           : base
+        Throttle                : none
+    Fans
+        fan1                    : 1200 RPM
+    Engines
+        render (rcs)            : 20.5 %
+        compute (ccs)           : 25.0 %
+        video (vcs)             : 0.0 %
+        enhance (vecs)          : 0.0 %
+        copy (bcs)              : 0.0 %
+    Processes                   : 2 clients
+    Topology
+        NUMA node               : 0
+        Local CPUs              : 0-31
+        IOMMU group             : 42
+        PCI path                : pci0000:e3 > 0000:e3:00.0
+    PCIe health
+        AER endpoint            : N/A
+        Root port               : N/A
+    Connectors
+        DP-1                    : disconnected
+        HDMI-A-1                : connected, enabled, 3 modes
+    SR-IOV
+        VFs                     : 0 of 7 enabled
+    Crash dumps                 : none pending

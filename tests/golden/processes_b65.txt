@@ -1,0 +1,3 @@
+PID    NAME          BUS ID        CLIENT  RENDER%  COMPUTE%  VIDEO%  ENHANCE%  COPY%  VRAM MiB
+4242   llama-server  0000:e3:00.0  42         20.0      25.0     0.0       0.0    0.0      1024
+4300   Xwayland      0000:e3:00.0  7           0.5       0.0     0.0       0.0    0.0        64

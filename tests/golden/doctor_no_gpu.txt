@@ -1,0 +1,8 @@
+xe-gmi 0.2.0 doctor
+Kernel                          : 7.0.0-27-generic
+Distro                          : Ubuntu 24.04.5 LTS
+xe module                       : available for this kernel but not loaded (/lib/modules/7.0.0-27-generic/kernel/drivers/gpu/drm/xe/xe.ko.zst)
+GPUs on the PCI bus
+    (none)
+Usable xe devices               : 0
+Result                          : no usable xe device (exit 3)

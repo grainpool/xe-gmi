@@ -1,0 +1,36 @@
+# Copy to verify/verify.conf and edit. Sourced by run-verify.sh (bash).
+
+# The one and only device the script may touch. Must be bound to the xe driver.
+PCI=0000:e3:00.0
+
+# xe-gmi binary to test (a release build is preferred).
+XE_GMI=./target/release/xe-gmi
+
+# Where results go (a timestamped subdirectory is created).
+RESULTS_DIR=./verify/results
+
+# Power-limit round trip: the script lowers the effective limit by this many watts (never below
+# 50% of the boot value) and restores it. Set to 0 to skip the write.
+POWER_DELTA_W=50
+
+# Probe the driver clamp by requesting boot+50 W and expecting the readback to stay at the boot
+# value. Safe on Battlemage (mailbox clamp). Set to 0 to skip.
+CLAMP_PROBE=1
+
+# Clock round trip: lowers max_freq by this many MHz on each GT (never below min_freq) and restores.
+CLOCK_DELTA_MHZ=200
+
+# Power profile round trip (kernel 6.18+). 1 = run, 0 = skip.
+PROFILE_TEST=1
+
+# Persistence round trip: installs the udev rule + state file, applies, then removes both
+# (unless KEEP_PERSIST=1). Requires XE_GMI to live under /usr or /opt, or PERSIST_EXE to point there.
+PERSIST_TEST=1
+PERSIST_EXE=/usr/local/bin/xe-gmi
+KEEP_PERSIST=0
+
+# Non-root checks run as this user (defaults to $SUDO_USER).
+#UNPRIV_USER=alice
+
+# Seconds each xe-gmi invocation may take before it is killed.
+STEP_TIMEOUT=30

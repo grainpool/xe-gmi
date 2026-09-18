@@ -1,0 +1,2 @@
+# xe-gmi persist rule, format 1. Managed by `xe-gmi persist`; edits are overwritten.
+ACTION=="bind", SUBSYSTEM=="pci", ENV{DRIVER}=="xe", RUN+="/usr/local/bin/xe-gmi persist apply --udev-devpath=%p"

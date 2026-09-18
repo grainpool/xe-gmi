@@ -1,0 +1,3 @@
+GPU 0 [0000:e3:00.0]
+  gt0  base  (available: base, power_saving)
+  gt1  base  (available: base, power_saving)

@@ -1,0 +1,10 @@
+GPU 0 [0000:e3:00.0]: recovery plan
+  method                   : flr (advertised: flr bus)
+  driver                   : xe (bound)
+  crash dump               : none pending
+  DRM clients              : 2 (llama-server, Xwayland) -> requires --force
+  active connectors        : HDMI-A-1 -> requires --force
+  enabled VFs              : 0
+  other functions on bus   : none
+  after recovery           : persist apply (not installed: nothing to reapply)
+Result: refused (2 soft preconditions failed; pass --force to override)

@@ -1,0 +1,11 @@
+xe-gmi 0.2.0 doctor
+Kernel                          : 6.8.0-79-generic
+Distro                          : Ubuntu 24.04.5 LTS
+xe module                       : available for this kernel but not loaded (/lib/modules/6.8.0-79-generic/kernel/drivers/gpu/drm/xe/xe.ko.zst)
+GPUs on the PCI bus
+    0000:01:00.0  10de:ffff  driver nvidia   ignored (not an Intel GPU)
+    0000:03:00.0  8086:56a0  driver i915     Intel DG2 [Arc A770]: xe needs xe.force_probe=56a0 and i915.force_probe=!56a0 on every kernel through 7.2
+    0000:81:00.0  10de:ffff  driver nvidia   ignored (not an Intel GPU)
+    0000:e3:00.0  8086:e222  no driver       Intel Battlemage G31 [Arc Pro B65]: PCI ID first supported by xe in kernel 6.17; this kernel is 6.8. Ubuntu 24.04: sudo apt install linux-generic-hwe-24.04
+Usable xe devices               : 0
+Result                          : no usable xe device (exit 3)

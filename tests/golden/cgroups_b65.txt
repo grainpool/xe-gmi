@@ -1,0 +1,4 @@
+CGROUP                                           VRAM USED    VRAM MAX   CLIENTS
+/system.slice/llama.service                       1024 MiB   20480 MiB         1
+/user.slice/user-1000.slice/session-2.scope         64 MiB         max         1
+Capacity: 32768 MiB (drm/0000:e3:00.0/vram0)

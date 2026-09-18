@@ -1,0 +1,19 @@
+GPU 0 [0000:17:00.0]
+  Link                     : gen5 x16 (max gen5 x16)
+  AER (endpoint)           : correctable 5, non-fatal 1, fatal 0
+    RxErr                  : 2
+    Timeout                : 3
+    UnsupReq (non-fatal)   : 1
+  Root port 0000:16:01.0   : correctable 7, non-fatal 0, fatal 0
+GPU 1 [0000:19:00.0]
+  Link                     : gen5 x16 (max gen5 x16)
+  AER (endpoint)           : N/A (no AER statistics exposed for this device)
+  Root port 0000:16:03.0   : N/A (no AER statistics exposed on the root port)
+GPU 2 [0000:67:00.0]
+  Link                     : gen5 x16 (max gen5 x16)
+  AER (endpoint)           : N/A (no AER statistics exposed for this device)
+  Root port 0000:64:01.0   : N/A (no AER statistics exposed on the root port)
+GPU 3 [0000:68:00.0]
+  Link                     : gen5 x16 (max gen5 x16)
+  AER (endpoint)           : N/A (no AER statistics exposed for this device)
+  Root port 0000:64:01.0   : N/A (no AER statistics exposed on the root port)

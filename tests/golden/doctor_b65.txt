@@ -1,0 +1,28 @@
+xe-gmi 0.2.0 doctor
+Kernel                          : 7.1.4-200.fc43.x86_64
+Distro                          : Fedora Linux 43 (Workstation Edition)
+xe module                       : loaded (live)
+GPUs on the PCI bus
+    0000:01:00.0  10de:ffff  driver nvidia   ignored (not an Intel GPU)
+    0000:81:00.0  10de:ffff  driver nvidia   ignored (not an Intel GPU)
+    0000:e3:00.0  8086:e222  driver xe       Intel Battlemage G31 [Arc Pro B65]: usable (card1, renderD128, hwmon7)
+Usable xe devices               : 1
+Capabilities of 0000:e3:00.0
+    power limit                 : pl2 card writable (power1_cap); pl1 not exposed
+    critical limit              : 400.00 W (read-only in xe-gmi)
+    energy counters             : card, pkg
+    temperatures                : pkg, vram, mctrl, pcie, vram_ch_0..vram_ch_7 (with crit/emergency limits)
+    fans                        : 1 (read-only)
+    GT clocks                   : gt0 300..2850 MHz, gt1 300..2400 MHz (writable)
+    power profile               : supported (base, power_saving)
+    throttle reasons            : aggregate `reasons` attribute present
+    VRAM total                  : 32768 MiB (BAR aperture, 34359738368 bytes)
+    fdinfo engine cycles        : supported
+    persistence                 : not installed
+    reset methods               : flr bus
+    SR-IOV                      : PF, 0 of 7 VFs enabled
+    cgroup dmem                 : present (drm/0000:e3:00.0/vram0 capacity 32768 MiB)
+    AER statistics              : not exposed for this device
+    crash dumps                 : none pending
+    connectors                  : 1 connected of 2
+Result                          : ok (exit 0)

@@ -1,0 +1,7 @@
+pos:	0
+flags:	02100002
+mnt_id:	28
+ino:	1234
+drm-driver:	nvidia-drm
+drm-client-id:	3
+drm-pdev:	0000:01:00.0

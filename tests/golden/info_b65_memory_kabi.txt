@@ -1,0 +1,13 @@
+xe-gmi 0.2.0 report
+Timestamp                       : 2026-09-14T10:22:31Z
+Kernel                          : 7.1.4-200.fc43.x86_64
+Driver                          : xe (module live)
+Devices                         : 1
+
+GPU 0 [0000:e3:00.0]
+    Memory
+        Total                   : 32768 MiB (kernel memory regions)
+        Used                    : 9412 MiB (kernel allocator; 1088 MiB resident in 2 clients)
+        Free                    : 23356 MiB
+        CPU-visible             : 32768 MiB total, 9412 MiB used (full BAR)
+        Min page size           : 64 KiB

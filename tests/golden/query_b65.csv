@@ -1,0 +1,2 @@
+index, name, pci.address, temp.pkg [C], power.draw [W], power.limit [W], utilization.gt [%], memory.used [MiB], memory.total [MiB], clock.cur [MHz], clock.max [MHz], gt1.clock.cur [MHz], throttle.reasons, fan.rpm [RPM], pcie.link.gen.current, power.profile
+0, Battlemage G31 [Arc Pro B65], 0000:e3:00.0, 41, 12.40, 200.00, 2.5, 1088, 32768, 1200, 2850, 300, none, 1200, 4, base

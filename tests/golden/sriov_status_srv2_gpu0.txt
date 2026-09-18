@@ -1,0 +1,13 @@
+GPU 0 [0000:17:00.0]
+  Total VFs                : 7
+  Enabled VFs              : 2
+  Autoprobe                : yes
+  PF profile               : quantum 0 ms, preempt 0 us, priority low
+  VF    VRAM QUOTA  QUANTUM   PREEMPT    PRIORITY  DEVICE
+  vf1   4096 MiB    10 ms     20000 us   normal    0000:17:00.1 (vfio-pci)
+  vf2   4096 MiB    10 ms     20000 us   normal    0000:17:00.2 (vfio-pci)
+  vf3   0 MiB       0 ms      0 us       low       -
+  vf4   0 MiB       0 ms      0 us       low       -
+  vf5   0 MiB       0 ms      0 us       low       -
+  vf6   0 MiB       0 ms      0 us       low       -
+  vf7   0 MiB       0 ms      0 us       low       -

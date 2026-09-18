@@ -1,0 +1,7 @@
+GPU 0 [0000:e3:00.0]
+  Tile 0
+    GT 0 [main] Xe 20.1.0, reference clock 19200000 Hz, near memory vram0
+      engines: rcs0, ccs0, ccs1, ccs2, ccs3, bcs0, bcs1
+      geometry DSS 20, compute DSS 20, L3 banks 16, EUs per DSS 8, SIMD16 EUs per DSS 8
+    GT 1 [media] Xe 13.0.0, reference clock 19200000 Hz, near memory vram0
+      engines: vcs0, vcs1, vecs0

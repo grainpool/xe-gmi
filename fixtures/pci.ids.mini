@@ -1,0 +1,12 @@
+#
+#	Minimal pci.ids excerpt used by the test-suite (XE_GMI_PCIIDS points here).
+#	Format is identical to the real /usr/share/hwdata/pci.ids: vendor lines start at
+#	column 0, device lines are tab-indented, subsystem lines double-tab-indented.
+#
+8086  Intel Corporation
+	56a0  DG2 [Arc A770]
+	e20b  Battlemage G21 [Arc B580]
+	e20c  Battlemage G21 [Arc B570]
+	e222  Battlemage G31 [Arc Pro B65]
+10de  NVIDIA Corporation
+	ffff  Placeholder Device (synthetic fixture)

@@ -1,0 +1,7 @@
+pos:	0
+flags:	02100002
+mnt_id:	28
+ino:	1234
+drm-driver:	xe
+drm-client-id:	7
+drm-pdev:	0000:e3:00.0

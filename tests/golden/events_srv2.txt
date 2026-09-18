@@ -1,0 +1,4 @@
+2026-09-14T10:22:31Z 0000:67:00.0 wedged recovery=rebind,bus-reset
+2026-09-14T10:22:31Z - devcoredump created devcd1
+2026-09-14T10:22:31Z 0000:67:00.0 unbind driver=xe
+2026-09-14T10:22:31Z 0000:67:00.0 bind driver=xe

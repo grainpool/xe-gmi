@@ -1,0 +1,14 @@
+/target
+/verify/results
+/verify/verify.conf
+/fixtures/captured
+/man
+/dev
+/xe-gmi-*.tar.gz
+/xe-gmi-*.tar.gz.sha256
+*.orig
+*.rej
+/.toolchains
+__pycache__/
+/verify/results-*.md
+/verify/events-*.log

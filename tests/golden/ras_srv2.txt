@@ -1,0 +1,18 @@
+GPU 0 [0000:17:00.0]
+  correctable-errors
+    core-compute           : 0
+    soc-internal           : 3
+  uncorrectable-errors
+    core-compute           : 0
+    soc-internal           : 0
+GPU 1 [0000:19:00.0]
+  N/A (no RAS nodes registered for this device)
+GPU 2 [0000:67:00.0]
+  correctable-errors
+    core-compute           : 1
+    soc-internal           : 0
+  uncorrectable-errors
+    core-compute           : 1
+    soc-internal           : 0
+GPU 3 [0000:68:00.0]
+  N/A (no RAS nodes registered for this device)

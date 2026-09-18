@@ -1,0 +1,9 @@
+GPU 0 [0000:e3:00.0]
+  effective       : 200.00 W (pl2 card)
+  pl1 card        : N/A (power1_max not exposed: firmware has PL1 disabled)
+  pl2 card        : 200.00 W (window 15 ms)
+  pl1 pkg         : N/A (power2_max not exposed)
+  pl2 pkg         : N/A (power2_cap not exposed)
+  critical card   : 400.00 W
+  boot default    : not recorded (recorded on the first control write in this boot)
+  writable        : yes (root required)

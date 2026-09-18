@@ -1,0 +1,32 @@
+GPU 0 [0000:17:00.0]
+  NUMA node                : 0
+  Local CPUs               : 0-31
+  IOMMU group              : 30
+  PCI path                 : pci0000:16 > 0000:16:01.0 > 0000:17:00.0
+  SR-IOV                   : PF, 2 of 7 VFs enabled (0000:17:00.1 vfio-pci, 0000:17:00.2 vfio-pci)
+GPU 1 [0000:19:00.0]
+  NUMA node                : 0
+  Local CPUs               : 0-31
+  IOMMU group              : 31
+  PCI path                 : pci0000:16 > 0000:16:03.0 > 0000:19:00.0
+  SR-IOV                   : PF, 0 of 7 VFs enabled
+GPU 2 [0000:67:00.0]
+  NUMA node                : 1
+  Local CPUs               : 32-63
+  IOMMU group              : 32
+  PCI path                 : pci0000:64 > 0000:64:01.0 > 0000:65:00.0 > 0000:66:04.0 > 0000:67:00.0
+  SR-IOV                   : PF, 0 of 7 VFs enabled
+GPU 3 [0000:68:00.0]
+  NUMA node                : 1
+  Local CPUs               : 32-63
+  IOMMU group              : 33
+  PCI path                 : pci0000:64 > 0000:64:01.0 > 0000:65:00.0 > 0000:66:08.0 > 0000:68:00.0
+  SR-IOV                   : PF, 0 of 7 VFs enabled
+
+Affinity (xe devices only)
+      GPU0  GPU1  GPU2  GPU3
+GPU0  X     PHB   SYS   SYS
+GPU1  PHB   X     SYS   SYS
+GPU2  SYS   SYS   X     PIX
+GPU3  SYS   SYS   PIX   X
+Legend: PIX same root port, PHB same host bridge, NODE same NUMA node, SYS different NUMA nodes

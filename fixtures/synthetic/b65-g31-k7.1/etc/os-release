@@ -1,0 +1,5 @@
+NAME="Fedora Linux"
+VERSION="43 (Workstation Edition)"
+ID=fedora
+VERSION_ID=43
+PRETTY_NAME="Fedora Linux 43 (Workstation Edition)"

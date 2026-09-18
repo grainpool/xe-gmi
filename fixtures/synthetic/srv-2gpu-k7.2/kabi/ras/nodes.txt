@@ -1,0 +1,4 @@
+1 0000:17:00.0 correctable-errors 1
+2 0000:17:00.0 uncorrectable-errors 1
+3 0000:67:00.0 correctable-errors 1
+4 0000:67:00.0 uncorrectable-errors 1
