@@ -233,6 +233,23 @@ fn errno_to_error(e: Errno, hint_cmd: &str) -> Error {
     }
 }
 
+/// Map a raw `nlmsgerr` code (the negative errno the kernel carries) to our error type WITHOUT
+/// touching `Errno`: on the linux_raw backend every constructor from a small negative integer
+/// asserts, and a family lookup failure must never abort the tool. The kernel sends these codes
+/// as negatives (-ENOENT = family absent answers get-family on 7.1+).
+pub fn nl_code_to_error(code: i32, hint_cmd: &str) -> Error {
+    match -code {
+        2 | 95 => Error::Unavailable(
+            "drm-ras netlink family not present (kernel 7.2+ with xe RAS support)".into(),
+        ),
+        1 | 13 => Error::PermissionDenied {
+            path: PathBuf::from("/run/xe-gmi/drm-ras"),
+            hint: format!("sudo xe-gmi {hint_cmd}"),
+        },
+        other => Error::Unavailable(format!("drm-ras netlink error {other} ({hint_cmd})")),
+    }
+}
+
 fn open_genl() -> Result<std::fs::File, Error> {
     let fd = socket(
         AddressFamily::NETLINK,
@@ -304,10 +321,7 @@ fn round_trip(fd: &std::fs::File, req: &[u8], hint_cmd: &str) -> Result<Vec<Attr
         match take_replies(&buf[..n], &mut replies) {
             Ok(Round::Done) => return Ok(replies),
             Ok(Round::More) => {}
-            Err(code) => {
-                let e = Errno::from_raw_os_error(code);
-                return Err(errno_to_error(e, hint_cmd));
-            }
+            Err(code) => return Err(nl_code_to_error(code, hint_cmd)),
         }
     }
 }
@@ -518,6 +532,28 @@ mod tests {
         }
         match errno_to_error(Errno::PERM, "ras --clear") {
             Error::PermissionDenied { hint, .. } => assert_eq!(hint, "sudo xe-gmi ras --clear"),
+            other => panic!("{other:?}"),
+        }
+    }
+
+    #[test]
+    fn genl_raw_nl_codes_never_touch_errno_constructors() {
+        // the 7.1 rig answers get-family with NLMSG_ERROR(-ENOENT); decoding it must produce
+        // the friendly Unavailable, not hit the linux_raw backend's encoded-errno assertion
+        match nl_code_to_error(-2, "ras") {
+            Error::Unavailable(m) => assert!(m.contains("drm-ras") && m.contains("7.2")),
+            other => panic!("{other:?}"),
+        }
+        match nl_code_to_error(-1, "ras --clear") {
+            Error::PermissionDenied { hint, .. } => assert_eq!(hint, "sudo xe-gmi ras --clear"),
+            other => panic!("{other:?}"),
+        }
+        match nl_code_to_error(-95, "ras") {
+            Error::Unavailable(m) => assert!(m.contains("7.2")),
+            other => panic!("{other:?}"),
+        }
+        match nl_code_to_error(-4200, "ras") {
+            Error::Unavailable(m) => assert!(m.contains("4200")),
             other => panic!("{other:?}"),
         }
     }

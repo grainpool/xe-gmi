@@ -57,3 +57,21 @@ has `.cmd/.stdout/.stderr/.exit/.ms/.before/.after` files. For a FAIL, compare t
 control messages in the README and the kernel interface notes in `docs/abi-notes.md` — the kernel
 is the arbiter. The boot values in `snapshot.txt` are the ground truth to record under "Observed on
 hardware" in `docs/abi-notes.md`; `restore.sh` puts everything back.
+
+## Extended feature verification — `run-verify-ext.sh`
+
+`run-verify-ext.sh` exercises the 0.2.0 surface (kernel memory/firmware/hardware-topology reads,
+events, cgroup limits, SR-IOV, device recovery) plus the read paths of the half-A features, and
+includes unprivileged steps so a regression that only bites non-root users cannot pass. Flags:
+`--yes` (no pauses), `--pci <busid>` (pick the card; prefer one no display is attached to),
+`--force-recover` (run the recovery sequence even with DRM clients visible — the guarded refusal
+is recorded first either way). It writes `verify/results-<date>.md` and `verify/events-<date>.log`
+in a single file each; these are **local hardware evidence by design** — gitignored, never
+committed, the repository ships the harness and not someone's machine.
+
+Run it from a virtual terminal (Ctrl-Alt-F2): `sudo verify/run-verify-ext.sh --yes --pci <busid>`.
+On a desktop machine the run itself can outlive your session — enabling an SR-IOV VF hotplugs a
+render node some compositors crash on — so on remote or desktop rigs use the transient system-unit
+recipe in the script's header; on SELinux-enforcing distributions a system unit cannot execute
+scripts from `$HOME`, which is why the recipe `install`s copies under `/usr/local` first (remove
+them afterwards; the recipe explains the reasoning end to end).

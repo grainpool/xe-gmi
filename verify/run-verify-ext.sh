@@ -57,6 +57,10 @@ step "processes --group-by client" $X processes --group-by client
 step "processes --group-by cgroup" $X processes --group-by cgroup
 step "fields provenance" $X fields
 step "info (all sections)" $X info
+# both half-A and half-B probe paths must degrade gracefully for unprivileged users (a real
+# kernel answering genl/ioctl must never panic; the pre-0.2.1 linux_raw build aborted all commands)
+step "unprivileged status (as nobody)" sudo -u nobody $X status
+step "unprivileged info (kabi rows must degrade to N/A, not abort)" sudo -u nobody $X info
 step "doctor" $X doctor
 HW="$(ls -d "$DEV"/hwmon/hwmon* | head -1)"
 WIN=""; for f in power1_cap_interval power1_max_interval; do [ -e "$HW/$f" ] && { WIN="$HW/$f"; break; }; done
@@ -73,7 +77,14 @@ rm -rf "$BUNDLE"
 step "firmware" $X firmware
 step "topology --hardware" $X topology --hardware
 step "memory sources" $X query --fields memory.total,memory.used,memory.total.source,memory.used.source,memory.cpu_visible.total
-if [ "$(uname -r | cut -d. -f1-2 | tr -d .)" -ge 72 ]; then step "ras" $X ras; else skip "ras" "kernel $(uname -r) < 7.2 (drm-ras family absent)"; fi
+if [ "$(uname -r | cut -d. -f1-2 | tr -d .)" -ge 72 ]; then step "ras" $X ras
+else
+  # family may pre-exist the kernel floor (Fedora 7.1.13 carries the core, not xe nodes): N/A
+  # output with exit 0 is the correct 7.1 answer; exit 5 (family absent) is equally fine
+  out="$($X ras 2>&1)"; rc=$?
+  if [ $rc -eq 0 ] || [ $rc -eq 5 ]; then log "## ras"; log "\$ $X ras"; log "$out"; log "(exit $rc)"; log "RESULT: PASS (expected on pre-7.2: N/A listing, or exit 5 where the family is absent)"
+  else log "## ras"; log "$out"; log "RESULT: FAIL"; fi
+fi
 # cgroup set/unset on a scratch cgroup
 CG=/sys/fs/cgroup; if [ -e $CG/dmem.capacity ]; then
   ADDED=0; grep -qw dmem $CG/cgroup.subtree_control || { confirm "enable dmem in $CG/cgroup.subtree_control for the test?" && echo +dmem > $CG/cgroup.subtree_control && ADDED=1; }

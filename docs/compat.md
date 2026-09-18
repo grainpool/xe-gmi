@@ -25,7 +25,7 @@
 | `firmware` versions (DRM `UC_FW_VERSION` query, render node) | 6.9 | `N/A (kernel 6.9+)` otherwise; the query runs through the kabi module (docs/kabi.md) |
 | Kernel memory accounting in `info`/`query` (DRM `MEM_REGIONS` query) | 6.8 | unprivileged `used` from 7.0: before that the kernel reports 0 without CAP_PERFMON and `memory.used` says so instead of falling back silently |
 | `topology --hardware`, VA bits and min alignment (DRM queries 0/2/3/5) | 6.8 | render node access is the only permission floor |
-| `ras` counters and clear (`drm-ras` netlink family) | 7.1 core, 7.2 xe nodes | Battlemage nodes appear with 7.2; before that the family lists no xe nodes and `ras` exits 5 naming the floor |
+| `ras` counters and clear (`drm-ras` netlink family) | 7.1 core, 7.2 xe nodes | Battlemage nodes appear with 7.2; on a kernel whose core carries the family but no xe nodes (e.g. Fedora 7.1.13) `ras` lists N/A per device; exit 5 is reserved for kernels where the family itself is absent |
 | `events` (live uevent stream incl. wedged) | 6.15 | binding the kernel multicast group needs root (`sudo xe-gmi events`) |
 | `recover` (unbind, `reset_method` + `reset`, bind) | 6.8 | methods advertised by the device's `reset_method`; see docs/hardware-safety.md |
 
