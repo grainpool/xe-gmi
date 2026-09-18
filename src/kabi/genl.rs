@@ -11,7 +11,7 @@ use rustix::net::{recv, send, socket, AddressFamily, RecvFlags, SendFlags, Socke
 use crate::error::Error;
 
 pub const NETLINK_GENERIC: u16 = 16;
-pub const NLCTRL_FAMILY_ID: u16 = 1;
+pub const NLCTRL_FAMILY_ID: u16 = 16; // GENL_ID_CTRL = NLMSG_MIN_TYPE (0x10); types below it are control messages
 pub const NLMSG_ERROR: u16 = 2;
 pub const NLMSG_DONE: u16 = 3;
 pub const NLM_F_REQUEST: u16 = 0x0001;
@@ -391,7 +391,7 @@ mod tests {
     fn genl_frame_bytes_are_stable() {
         // nlmsghdr(16) + genlmsghdr(4) + NLA {len=12,type=2,"drm-ras\0"}
         let req = get_family_request(7);
-        let mut want: Vec<u8> = vec![32, 0, 0, 0, 1, 0, 5, 0, 7, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0];
+        let mut want: Vec<u8> = vec![32, 0, 0, 0, 16, 0, 5, 0, 7, 0, 0, 0, 0, 0, 0, 0, 3, 1, 0, 0];
         want.extend_from_slice(&[12, 0, 2, 0]);
         want.extend_from_slice(b"drm-ras\0");
         assert_eq!(req, want);

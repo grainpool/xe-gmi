@@ -655,11 +655,19 @@ fn cmd_recover(
     .map_err(|e| named_step("bind", e))?;
     let started = std::time::Instant::now();
     if !sel.roots.fixture_mode() {
+        let mut bound_again = false;
         for _ in 0..600 {
             if std::fs::read_link(dev.dev_dir.join("driver")).is_ok() {
+                bound_again = true;
                 break;
             }
             std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        if !bound_again {
+            return Err(Error::WriteFailed(format!(
+                "bind: xe did not bind {} within 30 s; check the kernel log, then run: sudo xe-gmi recover --method rebind",
+                dev.pci
+            )));
         }
     }
     println!(
