@@ -1,4 +1,4 @@
-xe-gmi 0.2.0 report
+xe-gmi 0.2.1 report
 Timestamp                       : 2026-09-14T10:22:31Z
 Kernel                          : 7.1.4-200.fc43.x86_64
 Driver                          : xe (module live)

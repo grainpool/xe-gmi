@@ -1,4 +1,4 @@
-xe-gmi 0.2.0 doctor
+xe-gmi 0.2.1 doctor
 Kernel                          : 7.1.4-200.fc43.x86_64
 Distro                          : Fedora Linux 43 (Workstation Edition)
 xe module                       : loaded (live)

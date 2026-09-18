@@ -3,6 +3,19 @@
 All notable changes to xe-gmi are documented here. The format follows Keep a Changelog; versions
 follow SemVer. JSON output is versioned separately (`schema_version`, currently 1).
 
+## [0.2.1] — 2026-09-17
+
+### Fixed
+- `src/kabi`: a `drm-ras` nlctrl family lookup answered with `NLMSG_ERROR` and a raw negative code
+  on kernels where the family exists but xe registers no nodes; feeding that code to
+  `Errno::from_raw_os_error` tripped the `linux_raw` backend's encoded-errno assertion and aborted
+  every command that probes a device. The raw code is now mapped directly, so `ras` lists N/A per
+  device with exit 0 there, and exit 5 stays reserved for kernels where the family itself is absent
+  (`docs/compat.md` corrected accordingly).
+- `src/kabi`: the `drm-ras` family is resolved through the nlctrl id 16.
+- `recover`: now fails when the driver does not rebind, instead of proceeding as if the device had
+  come back.
+
 ## [0.2.0] — unreleased
 
 ### Added

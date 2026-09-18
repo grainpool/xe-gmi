@@ -7,7 +7,7 @@ One static binary, no daemon, no libraries; it talks to the kernel through `/sys
 
 ```
 $ xe-gmi
-xe-gmi 0.2.0 | driver xe | kernel 7.1.4-200.fc43.x86_64 | 2026-09-14T10:22:31Z
+xe-gmi 0.2.1 | driver xe | kernel 7.1.4-200.fc43.x86_64 | 2026-09-14T10:22:31Z
 +-----+------------------------------+--------------+----------+------------------+----------------+
 | Idx | Device                       | Bus Id       | Temp C   | Power W          | Memory MiB     |
 | GT  | Clock MHz                    | Profile      | Util %   | Throttle         | Fan RPM        |

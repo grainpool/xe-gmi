@@ -1,6 +1,6 @@
 [package]
 name = "xe-gmi"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 rust-version = "1.75"
 description = "GPU management CLI for Intel GPUs driven by the xe kernel driver: query, monitor, control and persist power/clock settings"
