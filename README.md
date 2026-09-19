@@ -32,6 +32,9 @@ Memory used = resident VRAM summed over visible DRM clients (run as root to see 
 
 ## Quick start
 
+`xe-gmi <command> --help` (or the man page in the release tarball) lists every flag; `xe-gmi fields`
+lists every queryable datum.
+
 ```
 xe-gmi                                  # status table, every xe device
 xe-gmi -u 10                            # refresh every 10 s
@@ -47,7 +50,8 @@ sudo xe-gmi persist install             # re-apply settings at every driver bind
 xe-gmi doctor                           # why isn't my card showing up?
 xe-gmi --json info                      # JSON, schema version 1
 xe-gmi topology                         # NUMA, CPUs, IOMMU groups, PCI paths, GPU affinity
-xe-gmi pcie                             # link state and AER error statistics (endpoint, root port)
+xe-gmi pcie                             # link state (via root port when the endpoint carries the
+                                        # KB 000094587 artifact), Power/ASPM lines, AER error stats
 xe-gmi crash list                       # pending GPU crash dumps (devcoredump)
 xe-gmi crash show 1                     # print a crash dump
 xe-gmi cgroups                          # GPU memory per cgroup (dmem controller)
